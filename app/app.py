@@ -10,7 +10,7 @@ import plotly.express as px
 
 # ── Import preprocessing pipeline ────────────────────────────────────────────
 
-sys.path.insert(0, '/content/drive/MyDrive/AirFair-Vista/backend')
+sys.path.insert(0, 'models/flight_price_prediction_pipeline.pkl')
 from preprocessor import (
     AIRLINES, SOURCES, DESTINATIONS, STOPS, MONTHS, WEEKDAYS,
     AIRLINE_MEAN_PRICE, SOURCE_FREQ, DEST_FREQ, SOURCE_MEAN_PRICE,
