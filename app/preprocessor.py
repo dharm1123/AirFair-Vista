@@ -102,8 +102,22 @@ INDIAN_HOLIDAYS  = {(3,25):'Holi',(3,29):'Good Friday',(4,14):'Ambedkar Jayanti'
                     (5,1):'Labour Day',(5,23):'Buddha Purnima',(6,5):'Eid ul-Fitr'}
 
 # ── Section 5: Model config ────────────────────────────────────────
+
 import os
-MODEL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'models', 'flight_price_prediction_pipeline.pkl')
+import gdown
+
+MODEL_PATH = 'models/flight_price_prediction_pipeline.pkl'
+
+# Auto-download model if not present
+if not os.path.exists(MODEL_PATH):
+    os.makedirs('models', exist_ok=True)
+    FILE_ID = 'PASTE_YOUR_FILE_ID_HERE'
+    gdown.download(
+        f'https://drive.google.com/uc?id={FILE_ID}',
+        MODEL_PATH,
+        quiet=False
+    )
+
 MODEL_FEATURES = [
     'journey_day','journey_month','journey_weekday','is_weekend','quarter',
     'dep_hour','weekday','is_holiday','duration_hours','duration_minutes',
