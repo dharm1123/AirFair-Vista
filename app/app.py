@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -8,8 +7,7 @@ import sys
 import plotly.graph_objects as go
 import plotly.express as px
 
-# ── Import preprocessing pipeline ────────────────────────────────────────────
-# Fix path so preprocessor.py can be found
+# ── Fix import path for Streamlit Cloud ──────────────────────────────
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend'))
 
 from preprocessor import (
