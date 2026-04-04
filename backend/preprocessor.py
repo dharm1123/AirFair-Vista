@@ -102,7 +102,7 @@ INDIAN_HOLIDAYS  = {(3,25):'Holi',(3,29):'Good Friday',(4,14):'Ambedkar Jayanti'
                     (5,1):'Labour Day',(5,23):'Buddha Purnima',(6,5):'Eid ul-Fitr'}
 
 # ── Section 5: Model config ────────────────────────────────────────
-MODEL_PATH = '/content/drive/MyDrive/AirFair-Vista/models/flight_price_prediction_pipeline.pkl'
+MODEL_PATH = 'https://github.com/dharm1123/AirFair-Vista/blob/main/models/flight_price_prediction_pipeline.pkl'
 MODEL_FEATURES = [
     'journey_day','journey_month','journey_weekday','is_weekend','quarter',
     'dep_hour','weekday','is_holiday','duration_hours','duration_minutes',
