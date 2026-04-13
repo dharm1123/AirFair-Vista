@@ -1,3 +1,5 @@
+%%writefile /content/drive/MyDrive/AirFair-Vista/app/app.py
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -7,9 +9,112 @@ import sys
 import plotly.graph_objects as go
 import plotly.express as px
 
-# ── Fix import path for Streamlit Cloud ──────────────────────────────
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend'))
+st.markdown("""
+<style>
 
+/* ---------- GLOBAL TEXT FIX ---------- */
+html, body, [class*="css"]  {
+    color: #111111;
+}
+
+/* ---------- INPUT BOXES ---------- */
+input, textarea {
+    color: #111111 !important;
+    background-color: #ffffff !important;
+}
+
+/* ---------- SELECTBOX DROPDOWN ---------- */
+div[data-baseweb="select"] > div {
+    background-color: #ffffff !important;
+    color: #111111 !important;
+}
+
+/* Selected value */
+div[data-baseweb="select"] span {
+    color: #111111 !important;
+}
+
+/* Dropdown menu */
+ul[role="listbox"] {
+    background-color: #ffffff !important;
+    color: #111111 !important;
+}
+
+/* ---------- LABELS ---------- */
+label {
+    color: #222222 !important;
+    font-weight: 500;
+}
+
+/* ---------- SIDEBAR (DARK MODE SAFE) ---------- */
+section[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #0a1a3f, #0f2c6b);
+    color: #ffffff !important;
+}
+
+section[data-testid="stSidebar"] * {
+    color: #ffffff !important;
+}
+
+/* ---------- MAIN CARD FIX ---------- */
+.block-container {
+    background-color: #f8f9fc;
+}
+
+/* ---------- BUTTON ---------- */
+button {
+    color: white !important;
+    background-color: #1f4cff !important;
+    border-radius: 8px;
+}
+
+/* ---------- SUCCESS / INFO ---------- */
+.stAlert {
+    border-radius: 10px;
+}
+
+/* ---------- DARK MODE SUPPORT ---------- */
+@media (prefers-color-scheme: dark) {
+
+    html, body {
+        color: #ffffff;
+        background-color: #0e1117;
+    }
+
+    input, textarea {
+        color: #ffffff !important;
+        background-color: #1e1e1e !important;
+    }
+
+    div[data-baseweb="select"] > div {
+        background-color: #1e1e1e !important;
+        color: #ffffff !important;
+    }
+
+    div[data-baseweb="select"] span {
+        color: #ffffff !important;
+    }
+
+    ul[role="listbox"] {
+        background-color: #1e1e1e !important;
+        color: #ffffff !important;
+    }
+
+    label {
+        color: #dddddd !important;
+    }
+
+    .block-container {
+        background-color: #0e1117;
+    }
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+# ── Import preprocessing pipeline ────────────────────────────────────────────
+
+sys.path.insert(0, '/content/drive/MyDrive/AirFair-Vista/backend')
 from preprocessor import (
     AIRLINES, SOURCES, DESTINATIONS, STOPS, MONTHS, WEEKDAYS,
     AIRLINE_MEAN_PRICE, SOURCE_FREQ, DEST_FREQ, SOURCE_MEAN_PRICE,
@@ -938,41 +1043,57 @@ with st.container():
     st.markdown('<br>', unsafe_allow_html=True)
 
     # Section C — Journey Details
-    st.markdown('<div class="form-section-title"> Section C · Journey Details</div>',
-                unsafe_allow_html=True)
-    cal1, cal2, cal3 = st.columns([3, 2, 1])
-    travel_date = cal1.date_input(
-        '📆 Travel Date',
-        value=_dt.date(2019, 4, 15),
-        min_value=_dt.date(2019, 3, 1),
-        max_value=_dt.date(2019, 6, 30),
-        help='Dataset: Mar–Jun 2019. Month, Day & Weekday are auto-derived.',
-        key='_travel_date'
-    )
-    journey_month   = travel_date.month
-    journey_day     = travel_date.day
-    journey_weekday = travel_date.weekday()
-    cal1.caption(
-        f'📅 {travel_date.strftime("%A, %d %B %Y")} · '
-        f'Month={journey_month}, Day={journey_day}, Weekday={journey_weekday}'
-    )
-    dep_hour   = cal2.slider(' Departure Hour', 0, 23, 8, key='_dep_hour')
-    passengers = cal3.number_input('👥 Passengers', 1, 9, 1, key='_passengers')
+st.markdown('<div class="form-section-title"> Section C · Journey Details</div>',
+            unsafe_allow_html=True)
 
-    st.markdown('<br>', unsafe_allow_html=True)
+from datetime import date as _date
 
-    # Live validation feedback
-    live_errors, live_warnings = get_validation_errors(
-        source, destination, airline, stops, int(passengers), dep_hour
-    )
-    if live_errors:
-        for e in live_errors:
-            st.error(f' {e}')
-    elif live_warnings:
-        for w in live_warnings:
-            st.warning(f' {w}')
-    else:
-        st.success('✅ All inputs valid — ready to predict!')
+today = _date.today()
+
+cal1, cal2, cal3 = st.columns([3, 2, 1])
+
+# ✅ UPDATED DATE INPUT (future dates only)
+travel_date = cal1.date_input(
+    '📆 Travel Date',
+    value=today,
+    min_value=today,
+    help='Select a future date. Month, Day & Weekday are auto-derived.',
+    key='_travel_date'
+)
+
+# ✅ KEEP THIS (correct feature extraction)
+journey_month   = travel_date.month
+journey_day     = travel_date.day
+journey_weekday = travel_date.weekday()
+
+# Optional caption (kept)
+cal1.caption(
+    f'📅 {travel_date.strftime("%A, %d %B %Y")} · '
+    f'Month={journey_month}, Day={journey_day}, Weekday={journey_weekday}'
+)
+
+# Optional info (recommended)
+st.info("ℹ️ Note: Model trained on historical data. Predictions for future dates are approximations.")
+
+# Other inputs (unchanged)
+dep_hour   = cal2.slider(' Departure Hour', 0, 23, 8, key='_dep_hour')
+passengers = cal3.number_input('👥 Passengers', 1, 9, 1, key='_passengers')
+
+st.markdown('<br>', unsafe_allow_html=True)
+
+# Live validation feedback (unchanged)
+live_errors, live_warnings = get_validation_errors(
+    source, destination, airline, stops, int(passengers), dep_hour
+)
+
+if live_errors:
+    for e in live_errors:
+        st.error(f' {e}')
+elif live_warnings:
+    for w in live_warnings:
+        st.warning(f' {w}')
+else:
+    st.success('✅ All inputs valid — ready to predict!')
 
     # ── Task 2: Real-time live price preview ─────────────────────────────
     # Why: users can see price update instantly as they adjust inputs,
@@ -1766,12 +1887,4 @@ with st.expander('🔀 Scenario Comparison — Compare up to 3 flight configurat
                     f'**{_cheap_sc["label"]}** ({_cheap_sc["airline"]}, '
                     f'{_cheap_sc["stops"]}) to save **{sym}{_saving:,}** per passenger.'
                 )
-
-
-
-
-
-
-
-
 
