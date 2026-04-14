@@ -114,7 +114,14 @@ button {
 
 # ── Import preprocessing pipeline ────────────────────────────────────────────
 
-sys.path.insert(0, '/content/drive/MyDrive/AirFair-Vista/backend')
+import sys
+import os
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BACKEND_PATH = os.path.join(BASE_DIR, "backend")
+
+sys.path.append(BACKEND_PATH)
+
 from preprocessor import (
     AIRLINES, SOURCES, DESTINATIONS, STOPS, MONTHS, WEEKDAYS,
     AIRLINE_MEAN_PRICE, SOURCE_FREQ, DEST_FREQ, SOURCE_MEAN_PRICE,
@@ -134,6 +141,7 @@ from preprocessor import (
 #   cache_data     → per-argument cache for pure functions
 #   Model is 53MB singleton → cache_resource correct choice.
 @st.cache_resource(show_spinner='Loading model...')
+
 def load_model():
     if os.path.exists(MODEL_PATH):
         pkl = joblib.load(MODEL_PATH)
