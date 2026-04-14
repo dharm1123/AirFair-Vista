@@ -1,4 +1,13 @@
 import streamlit as st
+
+# ── MUST be the very first Streamlit call ─────────────────────────────────────
+st.set_page_config(
+    page_title='AirFair Vista',
+    page_icon='✈️',
+    layout='wide',
+    initial_sidebar_state='expanded'
+)
+
 import pandas as pd
 import numpy as np
 import joblib
@@ -7,117 +16,12 @@ import sys
 import plotly.graph_objects as go
 import plotly.express as px
 
-st.markdown("""
-<style>
-
-/* ---------- GLOBAL TEXT FIX ---------- */
-html, body, [class*="css"]  {
-    color: #111111;
-}
-
-/* ---------- INPUT BOXES ---------- */
-input, textarea {
-    color: #111111 !important;
-    background-color: #ffffff !important;
-}
-
-/* ---------- SELECTBOX DROPDOWN ---------- */
-div[data-baseweb="select"] > div {
-    background-color: #ffffff !important;
-    color: #111111 !important;
-}
-
-/* Selected value */
-div[data-baseweb="select"] span {
-    color: #111111 !important;
-}
-
-/* Dropdown menu */
-ul[role="listbox"] {
-    background-color: #ffffff !important;
-    color: #111111 !important;
-}
-
-/* ---------- LABELS ---------- */
-label {
-    color: #222222 !important;
-    font-weight: 500;
-}
-
-/* ---------- SIDEBAR (DARK MODE SAFE) ---------- */
-section[data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #0a1a3f, #0f2c6b);
-    color: #ffffff !important;
-}
-
-section[data-testid="stSidebar"] * {
-    color: #ffffff !important;
-}
-
-/* ---------- MAIN CARD FIX ---------- */
-.block-container {
-    background-color: #f8f9fc;
-}
-
-/* ---------- BUTTON ---------- */
-button {
-    color: white !important;
-    background-color: #1f4cff !important;
-    border-radius: 8px;
-}
-
-/* ---------- SUCCESS / INFO ---------- */
-.stAlert {
-    border-radius: 10px;
-}
-
-/* ---------- DARK MODE SUPPORT ---------- */
-@media (prefers-color-scheme: dark) {
-
-    html, body {
-        color: #ffffff;
-        background-color: #0e1117;
-    }
-
-    input, textarea {
-        color: #ffffff !important;
-        background-color: #1e1e1e !important;
-    }
-
-    div[data-baseweb="select"] > div {
-        background-color: #1e1e1e !important;
-        color: #ffffff !important;
-    }
-
-    div[data-baseweb="select"] span {
-        color: #ffffff !important;
-    }
-
-    ul[role="listbox"] {
-        background-color: #1e1e1e !important;
-        color: #ffffff !important;
-    }
-
-    label {
-        color: #dddddd !important;
-    }
-
-    .block-container {
-        background-color: #0e1117;
-    }
-}
-
-</style>
-""", unsafe_allow_html=True)
-
 # ── Import preprocessing pipeline ────────────────────────────────────────────
-
 import sys
 import os
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BACKEND_PATH = os.path.join(BASE_DIR, "backend")
-
 sys.path.append(BACKEND_PATH)
 
 from preprocessor import (
@@ -134,12 +38,7 @@ from preprocessor import (
 )
 
 # ── Model loading (cached singleton) ─────────────────────────────────────────
-# WHY cache_resource not cache_data:
-#   cache_resource → shared singleton (model, DB conn) across ALL users
-#   cache_data     → per-argument cache for pure functions
-#   Model is 53MB singleton → cache_resource correct choice.
 @st.cache_resource(show_spinner='Loading model...')
-
 def load_model():
     if os.path.exists(MODEL_PATH):
         pkl = joblib.load(MODEL_PATH)
@@ -152,11 +51,6 @@ model, MODEL_LOADED = load_model()
 def predict_price(airline, source, destination, stops,
                   dep_hour, journey_month, journey_weekday,
                   journey_day, duration_hours, passengers):
-    """
-    Single prediction wrapper — needs model object from this scope.
-    Uses build_features() from preprocessor for feature engineering.
-    For N predictions use batch_predict_app() (276x faster).
-    """
     if MODEL_LOADED:
         try:
             X   = build_features(airline, source, destination,
@@ -167,7 +61,7 @@ def predict_price(airline, source, destination, stops,
                 raw = np.expm1(raw)
             return round(float(raw) * passengers, 2)
         except Exception as e:
-            st.warning(f' Model error: {e}  →  fallback estimator.')
+            st.warning(f'⚠️ Model error: {e}  →  fallback estimator.')
     base = (
         AIRLINE_MEAN.get(airline, PRICE_AVG)              * 0.30 +
         STOPS_MEAN.get(stops, PRICE_AVG)                  * 0.25 +
@@ -180,11 +74,6 @@ def predict_price(airline, source, destination, stops,
 
 
 def batch_predict_app(combos: list, passengers: int = 1) -> list:
-    """
-    Batch predict N combos in ONE model.predict() call via preprocessor.
-    WHY wrapper: preprocessor is model-agnostic; model lives here.
-    Performance: 12 airlines batch = 110ms vs 12x sequential = 1360ms.
-    """
     from preprocessor import batch_predict
     return batch_predict(
         model if MODEL_LOADED else None,
@@ -192,16 +81,8 @@ def batch_predict_app(combos: list, passengers: int = 1) -> list:
     )
 
 
-st.set_page_config(
-    page_title='AirFair Vista',
-    page_icon='✈️',
-    layout='wide',
-    initial_sidebar_state='expanded'
-)
-
-
 # ─────────────────────────────────────────────────────────────────────────────
-#  CSS
+#  MASTER CSS  (single block, no duplicates)
 # ─────────────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
@@ -239,6 +120,7 @@ st.markdown("""
 html, body, [class*="css"] {
     font-family: 'Plus Jakarta Sans', sans-serif !important;
     font-feature-settings: 'cv02','cv03','cv04','cv11';
+    color: var(--text-primary);
 }
 .stApp {
     background: var(--bg-main);
@@ -247,6 +129,53 @@ html, body, [class*="css"] {
         radial-gradient(ellipse at 80% 100%, rgba(245,166,35,0.04) 0%, transparent 60%);
 }
 * { box-sizing: border-box; }
+
+/* ── MAIN AREA TEXT ─────────────────────────────────────────────── */
+/* Ensure all main content text is dark */
+.main .block-container p,
+.main .block-container span,
+.main .block-container div,
+.main .block-container label {
+    color: var(--text-primary);
+}
+
+/* ── SELECTBOX — MAIN AREA ──────────────────────────────────────── */
+/* Container */
+.main div[data-baseweb="select"] > div {
+    background-color: #f8faff !important;
+    border: 1.5px solid var(--border) !important;
+    border-radius: var(--radius-sm) !important;
+    color: #0f172a !important;
+}
+/* Selected value text */
+.main div[data-baseweb="select"] span,
+.main div[data-baseweb="select"] div[class*="singleValue"],
+.main div[data-baseweb="select"] div[class*="placeholder"] {
+    color: #0f172a !important;
+}
+/* Dropdown open menu */
+div[data-baseweb="popover"] li,
+ul[role="listbox"] li {
+    color: #0f172a !important;
+    background-color: #ffffff !important;
+}
+ul[role="listbox"] li:hover {
+    background-color: #e8f0fe !important;
+}
+/* Focus ring */
+.main div[data-baseweb="select"] > div:focus-within {
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 3px rgba(0,82,204,0.1) !important;
+}
+
+/* ── SELECTBOX LABELS — MAIN AREA ───────────────────────────────── */
+.main .stSelectbox label {
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+    color: var(--text-secondary) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+}
 
 /* ── SIDEBAR ─────────────────────────────────────────────────────── */
 [data-testid="stSidebar"] {
@@ -265,13 +194,105 @@ html, body, [class*="css"] {
     pointer-events: none;
     z-index: 0;
 }
+
+/* Sidebar generic text */
 [data-testid="stSidebar"] p,
 [data-testid="stSidebar"] label,
 [data-testid="stSidebar"] .stMarkdown,
-[data-testid="stSidebar"] span { color: #cbd5e1 !important; }
-[data-testid="stSidebar"] .stSelectbox label { color: #94a3b8 !important; font-size: 0.72rem !important; }
+[data-testid="stSidebar"] span {
+    color: #cbd5e1 !important;
+}
 
-/* Sidebar brand */
+/* ── SIDEBAR SELECTBOX ─────────────── KEY FIX ──────────────────── */
+/* The box itself — semi-transparent dark on dark sidebar */
+[data-testid="stSidebar"] div[data-baseweb="select"] > div {
+    background-color: rgba(255,255,255,0.10) !important;
+    border: 1px solid rgba(255,255,255,0.18) !important;
+    border-radius: var(--radius-sm) !important;
+    color: #e2e8f0 !important;
+}
+/* Selected value text inside sidebar dropdown */
+[data-testid="stSidebar"] div[data-baseweb="select"] span,
+[data-testid="stSidebar"] div[data-baseweb="select"] div[class*="singleValue"],
+[data-testid="stSidebar"] div[data-baseweb="select"] div[class*="placeholder"],
+[data-testid="stSidebar"] div[data-baseweb="select"] input {
+    color: #e2e8f0 !important;
+}
+/* Dropdown arrow / icons inside sidebar select */
+[data-testid="stSidebar"] div[data-baseweb="select"] svg {
+    fill: #94a3b8 !important;
+}
+/* Sidebar label above dropdown */
+[data-testid="stSidebar"] .stSelectbox label {
+    color: #94a3b8 !important;
+    font-size: 0.72rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+}
+/* Dropdown open list (popover) — needs white bg for readability */
+[data-testid="stSidebar"] div[data-baseweb="popover"] ul,
+[data-testid="stSidebar"] ul[role="listbox"] {
+    background-color: #1e2d50 !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+}
+[data-testid="stSidebar"] div[data-baseweb="popover"] li,
+[data-testid="stSidebar"] ul[role="listbox"] li {
+    color: #e2e8f0 !important;
+    background-color: transparent !important;
+}
+[data-testid="stSidebar"] ul[role="listbox"] li:hover {
+    background-color: rgba(0,82,204,0.25) !important;
+}
+
+/* ── SIDEBAR TOGGLES ─────────────────────────────────────────────── */
+[data-testid="stSidebar"] .stToggle label,
+[data-testid="stSidebar"] .stToggle p {
+    color: #cbd5e1 !important;
+}
+
+/* ── INPUTS — MAIN AREA ─────────────────────────────────────────── */
+input, textarea {
+    color: #0f172a !important;
+    background-color: #f8faff !important;
+}
+.stNumberInput > div > div > input {
+    background: #f8faff !important;
+    border: 1.5px solid var(--border) !important;
+    border-radius: var(--radius-sm) !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    font-weight: 600 !important;
+    color: #0f172a !important;
+}
+[data-testid="stDateInput"] > div > div > input {
+    background: #f8faff !important;
+    border: 1.5px solid var(--border) !important;
+    border-radius: var(--radius-sm) !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    font-weight: 600 !important;
+    color: #0f172a !important;
+}
+[data-testid="stDateInput"] label {
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+    color: var(--text-secondary) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+}
+
+/* ── SLIDER ─────────────────────────────────────────────────────── */
+.stSlider label {
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+    color: var(--text-secondary) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+}
+.stSlider > div > div > div > div {
+    background: var(--primary) !important;
+}
+
+/* ── SIDEBAR ─────────────────────────────────────────────────────── */
 .sb-brand {
     font-family: 'Syne', sans-serif;
     font-size: 1.45rem;
@@ -287,11 +308,6 @@ html, body, [class*="css"] {
     letter-spacing: 2px;
     text-transform: uppercase;
     margin-top: 2px;
-}
-.sb-divider {
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
-    margin: 16px 0;
 }
 .sb-section-label {
     font-size: 0.58rem !important;
@@ -344,8 +360,7 @@ html, body, [class*="css"] {
 
 /* ── PAGE HEADER ─────────────────────────────────────────────────── */
 .page-header {
-    background: linear-gradient(135deg,
-        #09122c 0%, #0d1f5c 40%, #0052cc 100%);
+    background: linear-gradient(135deg, #09122c 0%, #0d1f5c 40%, #0052cc 100%);
     border-radius: var(--radius-xl);
     padding: 36px 40px 32px;
     margin-bottom: 28px;
@@ -444,58 +459,9 @@ html, body, [class*="css"] {
     gap: 6px;
 }
 
-/* ── WIDGETS ─────────────────────────────────────────────────────── */
-.stSelectbox > div > div {
-    background: #f8faff !important;
-    border: 1.5px solid var(--border) !important;
-    border-radius: var(--radius-sm) !important;
-    transition: border-color 0.15s ease !important;
-}
-.stSelectbox > div > div:focus-within {
-    border-color: var(--primary) !important;
-    box-shadow: 0 0 0 3px rgba(0,82,204,0.1) !important;
-}
-.stSelectbox label {
-    font-size: 0.78rem !important;
-    font-weight: 600 !important;
-    color: var(--text-secondary) !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
-}
-.stNumberInput > div > div > input {
-    background: #f8faff !important;
-    border: 1.5px solid var(--border) !important;
-    border-radius: var(--radius-sm) !important;
-    font-family: 'Plus Jakarta Sans', sans-serif !important;
-    font-weight: 600 !important;
-}
-.stSlider label {
-    font-size: 0.78rem !important;
-    font-weight: 600 !important;
-    color: var(--text-secondary) !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
-}
-.stSlider > div > div > div > div {
-    background: var(--primary) !important;
-}
-[data-testid="stDateInput"] label {
-    font-size: 0.78rem !important;
-    font-weight: 600 !important;
-    color: var(--text-secondary) !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
-}
-[data-testid="stDateInput"] > div > div > input {
-    background: #f8faff !important;
-    border: 1.5px solid var(--border) !important;
-    border-radius: var(--radius-sm) !important;
-    font-family: 'Plus Jakarta Sans', sans-serif !important;
-    font-weight: 600 !important;
-}
-
 /* ── PREDICT BUTTON ─────────────────────────────────────────────── */
-.stFormSubmitButton > button {
+.stFormSubmitButton > button,
+button[kind="primary"] {
     background: linear-gradient(90deg, var(--primary), var(--primary-dark)) !important;
     color: white !important;
     font-family: 'Syne', sans-serif !important;
@@ -506,19 +472,9 @@ html, body, [class*="css"] {
     padding: 15px 28px !important;
     letter-spacing: 0.3px;
     transition: all 0.2s ease !important;
-    position: relative !important;
-    overflow: hidden !important;
 }
-.stFormSubmitButton > button::before {
-    content: '';
-    position: absolute;
-    top: 0; left: -100%;
-    width: 100%; height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-    transition: left 0.4s ease;
-}
-.stFormSubmitButton > button:hover::before { left: 100%; }
-.stFormSubmitButton > button:hover {
+.stFormSubmitButton > button:hover,
+button[kind="primary"]:hover {
     transform: translateY(-1px) !important;
     box-shadow: 0 8px 24px rgba(0,82,204,0.35) !important;
 }
@@ -741,10 +697,6 @@ html, body, [class*="css"] {
     border-radius: var(--radius-md) !important;
     padding: 16px 20px !important;
     box-shadow: var(--shadow-sm) !important;
-    transition: box-shadow 0.2s ease !important;
-}
-[data-testid="stMetric"]:hover {
-    box-shadow: var(--shadow-md) !important;
 }
 [data-testid="stMetricLabel"] > div {
     font-size: 0.7rem !important;
@@ -829,7 +781,6 @@ hr {
 """, unsafe_allow_html=True)
 
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 #  ① INTERACTIVE SIDEBAR
 # ─────────────────────────────────────────────────────────────────────────────
@@ -844,7 +795,6 @@ with st.sidebar:
 
     st.divider()
 
-    # Display settings
     st.markdown('<div class="sb-section-label">Display Settings</div>',
                 unsafe_allow_html=True)
     currency       = st.selectbox('Currency',
@@ -854,7 +804,6 @@ with st.sidebar:
 
     st.divider()
 
-    # Model status
     st.markdown('<div class="sb-section-label">Model Status</div>',
                 unsafe_allow_html=True)
     if MODEL_LOADED:
@@ -874,7 +823,6 @@ with st.sidebar:
 
     st.divider()
 
-    # Dataset info
     st.markdown('<div class="sb-section-label">Dataset Info</div>',
                 unsafe_allow_html=True)
     for k, v in [
@@ -917,10 +865,8 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ── ② SMART INPUT FORM (no st.form — uses session_state for live updates) ───
 import datetime as _dt
 
-# ── Session state initialisation ────────────────────────────────────────────
 if 'source' not in st.session_state:
     st.session_state.source      = SOURCES[0]
 if 'destination' not in st.session_state:
@@ -932,13 +878,10 @@ if 'stops' not in st.session_state:
 if 'submitted' not in st.session_state:
     st.session_state.submitted   = False
 
-# ── Callbacks for smart auto-update ─────────────────────────────────────────
 def on_source_change():
-    """When source changes → auto-set destination to first valid option."""
     new_src  = st.session_state['_source_sel']
     st.session_state.source      = new_src
     valid    = VALID_DESTINATIONS.get(new_src, DESTINATIONS)
-    # Reset destination to first valid option for new source
     st.session_state.destination = valid[0]
     st.session_state['_dst_sel']  = valid[0]
     st.session_state.submitted    = False
@@ -948,11 +891,9 @@ def on_destination_change():
     st.session_state.submitted   = False
 
 def on_airline_change():
-    """When airline changes → auto-set stops to first valid option for that airline."""
     new_al   = st.session_state['_airline_sel']
     st.session_state.airline     = new_al
     valid    = VALID_AIRLINE_STOPS.get(new_al, STOPS)
-    # Reset stops to first valid option for new airline
     st.session_state.stops       = valid[0]
     st.session_state['_stops_sel'] = valid[0]
     st.session_state.submitted    = False
@@ -961,16 +902,13 @@ def on_stops_change():
     st.session_state.stops     = st.session_state['_stops_sel']
     st.session_state.submitted = False
 
-# ── Form card wrapper ────────────────────────────────────────────────────────
 st.markdown('<div class="form-card">', unsafe_allow_html=True)
 with st.container():
 
-    # Section A — Route
-    st.markdown('<div class="form-section-title"> Section A · Route</div>',
+    st.markdown('<div class="form-section-title">✈ Section A · Route</div>',
                 unsafe_allow_html=True)
     col_src, col_arrow, col_dst = st.columns([5, 1, 5])
 
-    # Source: triggers destination auto-update
     source = col_src.selectbox(
         'Source City', SOURCES,
         index=SOURCES.index(st.session_state.source),
@@ -982,9 +920,7 @@ with st.container():
         'font-size:1.3rem;color:#0f4c9a">→</div>',
         unsafe_allow_html=True
     )
-    # Destination: auto-filtered AND auto-set from source change
     valid_dsts  = VALID_DESTINATIONS.get(st.session_state.source, DESTINATIONS)
-    # Make sure stored destination is still valid for current source
     if st.session_state.destination not in valid_dsts:
         st.session_state.destination = valid_dsts[0]
     destination = col_dst.selectbox(
@@ -996,26 +932,23 @@ with st.container():
     auto_dst = len(valid_dsts) == 1
     col_dst.markdown(
         f'<span class="valid-badge">'
-        f'{" Auto-set" if auto_dst else "✅"} '
+        f'{"✈ Auto-set" if auto_dst else "✅"} '
         f'{len(valid_dsts)} route(s) from {source}</span>',
         unsafe_allow_html=True
     )
 
     st.markdown('<br>', unsafe_allow_html=True)
 
-    # Section B — Flight Details
-    st.markdown('<div class="form-section-title"> Section B · Flight Details</div>',
+    st.markdown('<div class="form-section-title">🛫 Section B · Flight Details</div>',
                 unsafe_allow_html=True)
     col_al, col_st = st.columns(2)
 
-    # Airline: triggers stops auto-update
     airline = col_al.selectbox(
         'Airline', AIRLINES,
         index=AIRLINES.index(st.session_state.airline),
         key='_airline_sel',
         on_change=on_airline_change
     )
-    # Stops: auto-filtered AND auto-set from airline change
     valid_stops = VALID_AIRLINE_STOPS.get(st.session_state.airline, STOPS)
     if st.session_state.stops not in valid_stops:
         st.session_state.stops = valid_stops[0]
@@ -1025,21 +958,19 @@ with st.container():
         key='_stops_sel',
         on_change=on_stops_change
     )
-    auto_stops = (st.session_state.stops == valid_stops[0])
     col_st.markdown(
         f'<span class="valid-badge">'
-        f'{" Auto-set" if len(valid_stops)==1 else "✅"} '
+        f'{"✈ Auto-set" if len(valid_stops)==1 else "✅"} '
         f'{len(valid_stops)} stop option(s) for {airline}</span>',
         unsafe_allow_html=True
     )
 
-    # Duration auto-predicted from route + stops
     duration_hrs = predict_duration(destination, destination, stops) \
         if source == destination \
         else predict_duration(source, destination, stops)
     st.markdown(
         f'<div class="duration-chip">'
-        f' Auto-predicted Duration: '
+        f'⏱ Auto-predicted Duration: '
         f'<span class="dur-val">{duration_hrs:.1f}h</span>'
         f' &nbsp;·&nbsp; Based on real {source} → {destination} / {stops} records'
         f'</div>',
@@ -1048,64 +979,54 @@ with st.container():
 
     st.markdown('<br>', unsafe_allow_html=True)
 
-    # Section C — Journey Details
-st.markdown('<div class="form-section-title"> Section C · Journey Details</div>',
+st.markdown('<div class="form-section-title">📅 Section C · Journey Details</div>',
             unsafe_allow_html=True)
 
-from datetime import date as _date
+from datetime import date as _date, timedelta as _timedelta
 
 today = _date.today()
 
 cal1, cal2, cal3 = st.columns([3, 2, 1])
 
-# ✅ UPDATED DATE INPUT (future dates only)
+# ✅ Future dates only
 travel_date = cal1.date_input(
     '📆 Travel Date',
-    value=today,
-    min_value=today,
-    help='Select a future date. Month, Day & Weekday are auto-derived.',
+    value=today + _timedelta(days=1),
+    min_value=today + _timedelta(days=1),
+    max_value=_date(2030, 12, 31),
+    help='Only future dates are selectable.',
     key='_travel_date'
 )
 
-# ✅ KEEP THIS (correct feature extraction)
 journey_month   = travel_date.month
 journey_day     = travel_date.day
 journey_weekday = travel_date.weekday()
 
-# Optional caption (kept)
 cal1.caption(
     f'📅 {travel_date.strftime("%A, %d %B %Y")} · '
     f'Month={journey_month}, Day={journey_day}, Weekday={journey_weekday}'
 )
 
-# Optional info (recommended)
-st.info("ℹ️ Note: Model trained on historical data. Predictions for future dates are approximations.")
+st.info("ℹ️ Model trained on 2019 data. Future date predictions are approximations based on learned patterns.")
 
-# Other inputs (unchanged)
-dep_hour   = cal2.slider(' Departure Hour', 0, 23, 8, key='_dep_hour')
+dep_hour   = cal2.slider('🕐 Departure Hour', 0, 23, 8, key='_dep_hour')
 passengers = cal3.number_input('👥 Passengers', 1, 9, 1, key='_passengers')
 
 st.markdown('<br>', unsafe_allow_html=True)
 
-# Live validation feedback (unchanged)
 live_errors, live_warnings = get_validation_errors(
     source, destination, airline, stops, int(passengers), dep_hour
 )
 
 if live_errors:
     for e in live_errors:
-        st.error(f' {e}')
+        st.error(f'❌ {e}')
 elif live_warnings:
     for w in live_warnings:
-        st.warning(f' {w}')
+        st.warning(f'⚠️ {w}')
 else:
     st.success('✅ All inputs valid — ready to predict!')
 
-    # ── Task 2: Real-time live price preview ─────────────────────────────
-    # Why: users can see price update instantly as they adjust inputs,
-    # without waiting to press Predict. Uses same model pipeline — not fake.
-    # Why NOT st.form: forms batch all inputs, blocking live updates.
-    # We use regular widgets + session_state which reruns on every change.
     if not live_errors:
         _live_dur = predict_duration(source, destination, stops)
         _live_price = predict_price(
@@ -1134,7 +1055,7 @@ else:
         )
 
     st.markdown('<br>', unsafe_allow_html=True)
-    # ── Predict button ────────────────────────────────────────────────────
+
     btn_label = '🔍  Predict Price' if not live_errors else '⚠️  Fix Errors Above to Predict'
     if st.button(
         btn_label,
@@ -1143,7 +1064,6 @@ else:
         disabled=bool(live_errors),
         key='_predict_btn'
     ):
-        st.session_state.submitted = False   # reset first to force rerun
         st.session_state.submitted   = True
         st.session_state._src_snap   = source
         st.session_state._dst_snap   = destination
@@ -1156,11 +1076,10 @@ else:
         st.session_state._dy_snap    = journey_day
         st.session_state._px_snap    = passengers
         st.session_state._td_snap    = travel_date
-        st.rerun()   # immediately rerun to show output below
+        st.rerun()
 
-st.markdown('</div>', unsafe_allow_html=True)  # close form-card
+st.markdown('</div>', unsafe_allow_html=True)
 
-# Snapshot values used for output (survive reruns)
 submitted = st.session_state.submitted
 if submitted:
     source          = st.session_state._src_snap
@@ -1176,32 +1095,25 @@ if submitted:
     travel_date     = st.session_state._td_snap
 
 
-
 if submitted:
-    # ── ③ OUTPUT DISPLAY ─────────────────────────────────────────────────────
-
-    # ── Advanced Input Validation ────────────────────────────────────────
     errors, warnings = get_validation_errors(
         source, destination, airline, stops,
         int(passengers), dep_hour
     )
 
-    # Show all warnings first (non-blocking)
     for w in warnings:
         st.warning(f'⚠️ {w}')
 
-    # Block on any errors
     if errors:
         for e in errors:
             st.error(f'❌ {e}')
         st.info(
-            '💡 **Valid routes in this dataset:** '
+            '💡 **Valid routes:** '
             'Banglore→Delhi/New Delhi · Chennai→Kolkata · '
             'Delhi→Cochin · Kolkata→Banglore · Mumbai→Hyderabad'
         )
         st.stop()
 
-    # ── Compute prediction (spinner shows while RF model runs) ─────────
     with st.spinner('🤖  Running ML model...'):
         price_inr = predict_price(
             airline, source, destination, stops,
@@ -1221,23 +1133,19 @@ if submitted:
     vs_class = 'vs-avg-up' if diff > 0 else 'vs-avg-down'
     vs_text  = (f'▲ {sym}{abs(diff):,.0f} above avg'
                 if diff > 0 else f'▼ {sym}{abs(diff):,.0f} below avg')
-    # Route distance — computed via Haversine formula from real GPS coordinates
     dist_km      = haversine_km(source, destination)
     dist_str     = f'{dist_km:,} km' if dist_km > 0 else 'N/A'
     speed_str    = f'{round(dist_km / duration_hrs):,} km/h' if dist_km > 0 and duration_hrs > 0 else 'N/A'
     price_per_km = f'{sym}{round(price_d / dist_km, 1)}/km' if dist_km > 0 else 'N/A'
-    # Holiday indicator — real Indian public holiday check
     holiday_name = INDIAN_HOLIDAYS.get((journey_month, int(journey_day)), None)
     holiday_tag  = f'🎉 {holiday_name}' if holiday_name else ''
 
-    # Reset button — lets user go back and change inputs
     rc1, rc2 = st.columns([6, 1])
     rc1.success('✅  Prediction ready!')
     if rc2.button('🔄 New', key='_reset_btn', help='Reset and make a new prediction'):
         st.session_state.submitted = False
         st.rerun()
 
-    # Output A — Ticket Card
     st.markdown(
         '<div class="output-section-title">📋 Output A · Your Flight Estimate</div>',
         unsafe_allow_html=True
@@ -1311,30 +1219,22 @@ if submitted:
     </div>
     """, unsafe_allow_html=True)
 
-    # Output B — Price Range
     if show_range:
         st.markdown(
             '<div class="output-section-title">📉 Output B · Price Range</div>',
             unsafe_allow_html=True
         )
         b1, b2, b3, b4 = st.columns(4)
-        b1.metric('🟢 Low Estimate',  f'{sym}{low_d:,.0f}',
-                  delta=f'-{sym}{price_d - low_d:,.0f}')
+        b1.metric('🟢 Low Estimate',  f'{sym}{low_d:,.0f}',  delta=f'-{sym}{price_d - low_d:,.0f}')
         b2.metric('🎯 Predicted',     f'{sym}{price_d:,.0f}')
-        b3.metric('🔴 High Estimate', f'{sym}{high_d:,.0f}',
-                  delta=f'+{sym}{high_d - price_d:,.0f}')
+        b3.metric('🔴 High Estimate', f'{sym}{high_d:,.0f}', delta=f'+{sym}{high_d - price_d:,.0f}')
         b4.metric('📊 Dataset Avg',   f'{sym}{avg_d:,.0f}')
 
-    # ═══════════════════════════════════════════════════════════════
-    #  OUTPUT C — PRICE COMPARISON VISUALIZATIONS (Task 4)
-    #  All predictions are live model.predict() calls — nothing static
-    # ═══════════════════════════════════════════════════════════════
     st.markdown(
         '<div class="output-section-title">📊 Output C · Price Comparison Visualizations</div>',
         unsafe_allow_html=True
     )
 
-    # ── Shared Plotly theme ───────────────────────────────────────
     PLOT_BG    = '#ffffff'
     GRID_COLOR = '#e8f0fe'
     FONT_FMLY  = 'Plus Jakarta Sans, sans-serif'
@@ -1342,40 +1242,24 @@ if submitted:
     ACCENT     = '#f5a623'
     SUCCESS    = '#22c55e'
     DANGER     = '#ef4444'
-    PALETTE    = [
-        '#0052cc','#f5a623','#22c55e','#ef4444','#8b5cf6',
-        '#06b6d4','#f97316','#14b8a6','#e11d48','#64748b',
-        '#a855f7','#10b981'
-    ]
 
     def base_layout(title, xaxis_title='', yaxis_title=''):
         return dict(
-            title=dict(
-                text=title,
-                font=dict(family=FONT_FMLY, size=14, color='#0f172a'),
-                x=0, xanchor='left', pad=dict(l=4, b=12)
-            ),
+            title=dict(text=title, font=dict(family=FONT_FMLY, size=14, color='#0f172a'),
+                       x=0, xanchor='left', pad=dict(l=4, b=12)),
             paper_bgcolor=PLOT_BG, plot_bgcolor=PLOT_BG,
             font=dict(family=FONT_FMLY, color='#64748b', size=11),
-            xaxis=dict(
-                title=xaxis_title, gridcolor=GRID_COLOR,
-                linecolor='#e2e8f0', tickfont=dict(size=10)
-            ),
-            yaxis=dict(
-                title=yaxis_title, gridcolor=GRID_COLOR,
-                linecolor='#e2e8f0', tickfont=dict(size=10),
-                tickprefix=sym
-            ),
+            xaxis=dict(title=xaxis_title, gridcolor=GRID_COLOR,
+                       linecolor='#e2e8f0', tickfont=dict(size=10)),
+            yaxis=dict(title=yaxis_title, gridcolor=GRID_COLOR,
+                       linecolor='#e2e8f0', tickfont=dict(size=10), tickprefix=sym),
             margin=dict(l=10, r=10, t=46, b=10),
-            hoverlabel=dict(
-                bgcolor='#0f172a', font_size=12,
-                font_family=FONT_FMLY, font_color='white',
-                bordercolor='#1e293b'
-            ),
+            hoverlabel=dict(bgcolor='#0f172a', font_size=12,
+                           font_family=FONT_FMLY, font_color='white',
+                           bordercolor='#1e293b'),
             showlegend=False
         )
 
-    # ── Task 1: Batch airline predictions (12 rows → 1 call, 12× faster) ───────
     _base = dict(source=source, destination=destination,
                  dep_hour=dep_hour, journey_month=journey_month,
                  journey_weekday=journey_weekday, journey_day=int(journey_day),
@@ -1385,56 +1269,33 @@ if submitted:
     al_prices  = {al: round(p * fac, 2) for al, p in zip(AIRLINES, _al_raw)}
 
     al_df = (
-        pd.DataFrame({'Airline': list(al_prices.keys()),
-                      'Price':   list(al_prices.values())})
-        .sort_values('Price')
-        .reset_index(drop=True)
+        pd.DataFrame({'Airline': list(al_prices.keys()), 'Price': list(al_prices.values())})
+        .sort_values('Price').reset_index(drop=True)
     )
-    al_df['Color']    = [SUCCESS if v < price_d else (DANGER if v > price_d else ACCENT)
-                         for v in al_df['Price']]
     al_df['Selected'] = al_df['Airline'] == airline
     al_df['Label']    = al_df['Price'].apply(lambda v: f'{sym}{v:,.0f}')
 
-    # ── Chart 1 + Chart 2 ─────────────────────────────────────────
     viz_c1, viz_c2 = st.columns(2)
 
-    # Chart 1 — Horizontal bar: all airlines ranked
     with viz_c1:
-        st.markdown(
-            '<div style="font-size:0.72rem;font-weight:700;color:#64748b;'
-            'text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">'
-            '🏷️ All Airlines · Ranked by Price</div>',
-            unsafe_allow_html=True
-        )
-        bar_colors = [
-            PRIMARY if a == airline else (
-                '#e8f0fe' if al_prices[a] < price_d else '#fee2e2'
-            )
-            for a in al_df['Airline']
-        ]
-        text_colors = [
-            'white' if a == airline else '#0f172a'
-            for a in al_df['Airline']
-        ]
+        st.markdown('<div style="font-size:0.72rem;font-weight:700;color:#64748b;'
+                    'text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">'
+                    '🏷️ All Airlines · Ranked by Price</div>', unsafe_allow_html=True)
+        bar_colors = [PRIMARY if a == airline else
+                      ('#e8f0fe' if al_prices[a] < price_d else '#fee2e2')
+                      for a in al_df['Airline']]
         fig1 = go.Figure(go.Bar(
-            x=al_df['Price'],
-            y=al_df['Airline'],
-            orientation='h',
+            x=al_df['Price'], y=al_df['Airline'], orientation='h',
             marker=dict(color=bar_colors, line=dict(width=0)),
-            text=al_df['Label'],
-            textposition='outside',
+            text=al_df['Label'], textposition='outside',
             textfont=dict(size=10, family=FONT_FMLY, color='#0f172a'),
             hovertemplate='<b>%{y}</b><br>Price: ' + sym + '%{x:,.0f}<extra></extra>',
             width=0.65
         ))
-        # Selected airline marker line
-        fig1.add_vline(
-            x=price_d, line_width=2, line_dash='dash',
-            line_color=ACCENT,
-            annotation_text='Your pick',
-            annotation_font=dict(size=10, color=ACCENT, family=FONT_FMLY),
-            annotation_position='top right'
-        )
+        fig1.add_vline(x=price_d, line_width=2, line_dash='dash', line_color=ACCENT,
+                       annotation_text='Your pick',
+                       annotation_font=dict(size=10, color=ACCENT, family=FONT_FMLY),
+                       annotation_position='top right')
         layout1 = base_layout('', xaxis_title=f'Price ({sym})')
         layout1['yaxis']['title'] = ''
         layout1['margin'] = dict(l=10, r=80, t=10, b=10)
@@ -1442,142 +1303,95 @@ if submitted:
         fig1.update_layout(**layout1)
         st.plotly_chart(fig1, use_container_width=True, config={'displayModeBar': False})
 
-    # Chart 2 — Grouped bar: by stops for selected airline vs cheapest
     with viz_c2:
-        st.markdown(
-            '<div style="font-size:0.72rem;font-weight:700;color:#64748b;'
-            'text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">'
-            '🔄 Price by Number of Stops</div>',
-            unsafe_allow_html=True
-        )
-        stops_data   = {}
-        cheapest_al  = al_df.iloc[0]['Airline']
+        st.markdown('<div style="font-size:0.72rem;font-weight:700;color:#64748b;'
+                    'text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">'
+                    '🔄 Price by Number of Stops</div>', unsafe_allow_html=True)
+        cheapest_al = al_df.iloc[0]['Airline']
+        stops_data  = {}
         for st_opt in STOPS:
             stops_data[st_opt] = {
-                'selected': predict_price(
-                    airline, source, destination, st_opt,
-                    dep_hour, journey_month, journey_weekday,
-                    int(journey_day), duration_hrs, int(passengers)
-                ) * fac,
-                'cheapest': predict_price(
-                    cheapest_al, source, destination, st_opt,
-                    dep_hour, journey_month, journey_weekday,
-                    int(journey_day), duration_hrs, int(passengers)
-                ) * fac,
+                'selected': predict_price(airline, source, destination, st_opt,
+                                         dep_hour, journey_month, journey_weekday,
+                                         int(journey_day), duration_hrs, int(passengers)) * fac,
+                'cheapest': predict_price(cheapest_al, source, destination, st_opt,
+                                         dep_hour, journey_month, journey_weekday,
+                                         int(journey_day), duration_hrs, int(passengers)) * fac,
             }
         fig2 = go.Figure()
         fig2.add_trace(go.Bar(
-            name=airline,
-            x=STOPS,
+            name=airline, x=STOPS,
             y=[stops_data[s]['selected'] for s in STOPS],
             marker_color=PRIMARY,
             text=[f'{sym}{stops_data[s]["selected"]:,.0f}' for s in STOPS],
-            textposition='outside',
-            textfont=dict(size=9, family=FONT_FMLY),
-            hovertemplate='<b>' + airline + '</b><br>%{x}<br>' +
-                          sym + '%{y:,.0f}<extra></extra>',
+            textposition='outside', textfont=dict(size=9, family=FONT_FMLY),
+            hovertemplate='<b>' + airline + '</b><br>%{x}<br>' + sym + '%{y:,.0f}<extra></extra>',
         ))
         if cheapest_al != airline:
             fig2.add_trace(go.Bar(
-                name=cheapest_al,
-                x=STOPS,
+                name=cheapest_al, x=STOPS,
                 y=[stops_data[s]['cheapest'] for s in STOPS],
                 marker_color='#e8f0fe',
                 text=[f'{sym}{stops_data[s]["cheapest"]:,.0f}' for s in STOPS],
                 textposition='outside',
                 textfont=dict(size=9, family=FONT_FMLY, color='#64748b'),
-                hovertemplate='<b>' + cheapest_al + '</b><br>%{x}<br>' +
-                              sym + '%{y:,.0f}<extra></extra>',
+                hovertemplate='<b>' + cheapest_al + '</b><br>%{x}<br>' + sym + '%{y:,.0f}<extra></extra>',
             ))
         layout2 = base_layout('', xaxis_title='Stops', yaxis_title=f'Price ({sym})')
-        layout2['barmode']    = 'group'
-        layout2['height']     = 340
+        layout2['barmode'] = 'group'
+        layout2['height']  = 340
         layout2['showlegend'] = True
-        layout2['legend']     = dict(
-            orientation='h', yanchor='bottom', y=1.02,
-            xanchor='left', x=0,
-            font=dict(size=10, family=FONT_FMLY)
-        )
+        layout2['legend'] = dict(orientation='h', yanchor='bottom', y=1.02,
+                                  xanchor='left', x=0, font=dict(size=10, family=FONT_FMLY))
         layout2['margin'] = dict(l=10, r=10, t=40, b=10)
         fig2.update_layout(**layout2)
         st.plotly_chart(fig2, use_container_width=True, config={'displayModeBar': False})
 
-    # ── Chart 3 + Chart 4 ─────────────────────────────────────────
     viz_c3, viz_c4 = st.columns(2)
 
-    # Chart 3 — Line: price by departure hour for top 3 airlines
     with viz_c3:
-        st.markdown(
-            '<div style="font-size:0.72rem;font-weight:700;color:#64748b;'
-            'text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">'
-            '⏰ Price vs Departure Hour (Top 3 Airlines)</div>',
-            unsafe_allow_html=True
-        )
-        top3 = al_df.head(1)['Airline'].tolist() + [airline]
-        if cheapest_al in top3: top3 = list(dict.fromkeys(top3))
-        # Always include: cheapest, selected, and mid-range
-        mid_idx  = len(al_df) // 2
-        mid_al   = al_df.iloc[mid_idx]['Airline']
-        top3     = list(dict.fromkeys([cheapest_al, airline, mid_al]))[:3]
-        hours    = list(range(0, 24))
-        fig3     = go.Figure()
+        st.markdown('<div style="font-size:0.72rem;font-weight:700;color:#64748b;'
+                    'text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">'
+                    '⏰ Price vs Departure Hour (Top 3 Airlines)</div>', unsafe_allow_html=True)
+        mid_idx = len(al_df) // 2
+        mid_al  = al_df.iloc[mid_idx]['Airline']
+        top3    = list(dict.fromkeys([cheapest_al, airline, mid_al]))[:3]
+        hours   = list(range(0, 24))
+        fig3    = go.Figure()
         line_colors = [SUCCESS, PRIMARY, ACCENT]
-        # Task 1: batch all (3 airlines × 24 hours = 72 rows) in one call
-        _c3_combos = [{**_base, 'airline': al, 'dep_hour': h}
-                      for al in top3 for h in hours]
+        _c3_combos = [{**_base, 'airline': al, 'dep_hour': h} for al in top3 for h in hours]
         _c3_raw    = batch_predict_app(_c3_combos, int(passengers))
-        _c3_prices = {al: [round(_c3_raw[ai*24+hi]*fac,2) for hi in range(24)]
+        _c3_prices = {al: [round(_c3_raw[ai*24+hi]*fac, 2) for hi in range(24)]
                       for ai, al in enumerate(top3)}
         for idx, al in enumerate(top3):
-            h_prices    = _c3_prices[al]
             is_selected = (al == airline)
             fig3.add_trace(go.Scatter(
-                x=hours,
-                y=h_prices,
-                name=al,
+                x=hours, y=_c3_prices[al], name=al,
                 mode='lines+markers',
-                line=dict(
-                    color=line_colors[idx],
-                    width=2.5 if is_selected else 1.5,
-                    dash='solid' if is_selected else 'dot'
-                ),
+                line=dict(color=line_colors[idx],
+                          width=2.5 if is_selected else 1.5,
+                          dash='solid' if is_selected else 'dot'),
                 marker=dict(size=5 if is_selected else 3),
                 hovertemplate='<b>' + al + '</b><br>Hour: %{x}<br>Price: ' +
                               sym + '%{y:,.0f}<extra></extra>',
             ))
-        # Mark the selected departure hour
-        fig3.add_vline(
-            x=dep_hour,
-            line_width=1.5, line_dash='dash', line_color='#94a3b8',
-            annotation_text=f'{dep_hour:02d}:00',
-            annotation_font=dict(size=9, family=FONT_FMLY, color='#94a3b8'),
-            annotation_position='top'
-        )
+        fig3.add_vline(x=dep_hour, line_width=1.5, line_dash='dash', line_color='#94a3b8',
+                       annotation_text=f'{dep_hour:02d}:00',
+                       annotation_font=dict(size=9, family=FONT_FMLY, color='#94a3b8'),
+                       annotation_position='top')
         layout3 = base_layout('', xaxis_title='Hour', yaxis_title=f'Price ({sym})')
-        layout3['height']     = 300
+        layout3['height'] = 300
         layout3['showlegend'] = True
-        layout3['legend']     = dict(
-            orientation='h', yanchor='bottom', y=1.02,
-            xanchor='left', x=0,
-            font=dict(size=9, family=FONT_FMLY)
-        )
-        layout3['xaxis']['tickangle'] = 0
-        layout3['xaxis']['nticks']    = 24
-        layout3['xaxis']['tickformat'] = '02d'
-        layout3['xaxis']['ticksuffix'] = ':00'
+        layout3['legend'] = dict(orientation='h', yanchor='bottom', y=1.02,
+                                  xanchor='left', x=0, font=dict(size=9, family=FONT_FMLY))
         layout3['margin'] = dict(l=10, r=10, t=40, b=40)
         fig3.update_layout(**layout3)
         st.plotly_chart(fig3, use_container_width=True, config={'displayModeBar': False})
 
-    # Chart 4 — Scatter: price vs duration for all airlines
     with viz_c4:
-        st.markdown(
-            '<div style="font-size:0.72rem;font-weight:700;color:#64748b;'
-            'text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">'
-            '⏱️ Price vs Duration (All Airlines)</div>',
-            unsafe_allow_html=True
-        )
-        # Task 1: batch all 60 scatter combos (12 airlines × 5 stops) in one call
+        st.markdown('<div style="font-size:0.72rem;font-weight:700;color:#64748b;'
+                    'text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">'
+                    '⏱️ Price vs Duration (All Airlines)</div>', unsafe_allow_html=True)
         _c4_meta   = [(al, st_opt, predict_duration(source, destination, st_opt))
                       for al in AIRLINES for st_opt in STOPS]
         _c4_combos = [{**_base, 'airline': al, 'duration_hours': dur}
@@ -1586,124 +1400,77 @@ if submitted:
         scatter_rows = []
         for (al, st_opt, dur), p_raw in zip(_c4_meta, _c4_raw):
             scatter_rows.append({
-                'Airline':  al,
-                'Duration': dur,
+                'Airline':  al, 'Duration': dur,
                 'Price':    round(p_raw * fac, 2),
                 'Stops':    st_opt,
                 'Selected': (al == airline and st_opt == stops),
             })
         sc_df = pd.DataFrame(scatter_rows)
-
-        fig4 = go.Figure()
-        # All non-selected points
-        mask_other    = ~sc_df['Selected']
+        fig4  = go.Figure()
+        mask_other = ~sc_df['Selected']
         fig4.add_trace(go.Scatter(
-            x=sc_df[mask_other]['Duration'],
-            y=sc_df[mask_other]['Price'],
-            mode='markers',
-            name='Other options',
-            marker=dict(
-                color='#e8f0fe', size=8,
-                line=dict(color='#94a3b8', width=1)
-            ),
+            x=sc_df[mask_other]['Duration'], y=sc_df[mask_other]['Price'],
+            mode='markers', name='Other options',
+            marker=dict(color='#e8f0fe', size=8, line=dict(color='#94a3b8', width=1)),
             customdata=sc_df[mask_other][['Airline','Stops']].values,
-            hovertemplate=(
-                '<b>%{customdata[0]}</b><br>'
-                'Stops: %{customdata[1]}<br>'
-                'Duration: %{x:.1f}h<br>'
-                'Price: ' + sym + '%{y:,.0f}<extra></extra>'
-            ),
+            hovertemplate='<b>%{customdata[0]}</b><br>Stops: %{customdata[1]}<br>'
+                          'Duration: %{x:.1f}h<br>Price: ' + sym + '%{y:,.0f}<extra></extra>',
         ))
-        # Selected point (highlighted)
         mask_sel = sc_df['Selected']
         if mask_sel.any():
             fig4.add_trace(go.Scatter(
-                x=sc_df[mask_sel]['Duration'],
-                y=sc_df[mask_sel]['Price'],
-                mode='markers+text',
-                name='Your pick',
-                marker=dict(
-                    color=PRIMARY, size=14,
-                    line=dict(color='white', width=2),
-                    symbol='star'
-                ),
+                x=sc_df[mask_sel]['Duration'], y=sc_df[mask_sel]['Price'],
+                mode='markers+text', name='Your pick',
+                marker=dict(color=PRIMARY, size=14, line=dict(color='white', width=2), symbol='star'),
                 text=[f'  {airline}<br>  {sym}{price_d:,.0f}'],
                 textposition='middle right',
                 textfont=dict(size=10, color=PRIMARY, family=FONT_FMLY),
-                hovertemplate=(
-                    '<b>⭐ YOUR PICK</b><br>'
-                    f'{airline}<br>'
-                    'Duration: %{x:.1f}h<br>'
-                    'Price: ' + sym + '%{y:,.0f}<extra></extra>'
-                ),
+                hovertemplate='<b>⭐ YOUR PICK</b><br>' + airline + '<br>'
+                              'Duration: %{x:.1f}h<br>Price: ' + sym + '%{y:,.0f}<extra></extra>',
             ))
-        # Price average line
-        fig4.add_hline(
-            y=avg_d, line_width=1.5,
-            line_dash='dash', line_color=ACCENT,
-            annotation_text=f'Dataset avg {sym}{avg_d:,.0f}',
-            annotation_font=dict(size=9, color=ACCENT, family=FONT_FMLY),
-            annotation_position='bottom right'
-        )
-        layout4 = base_layout('',
-                               xaxis_title='Duration (hours)',
-                               yaxis_title=f'Price ({sym})')
-        layout4['height']     = 300
+        fig4.add_hline(y=avg_d, line_width=1.5, line_dash='dash', line_color=ACCENT,
+                       annotation_text=f'Dataset avg {sym}{avg_d:,.0f}',
+                       annotation_font=dict(size=9, color=ACCENT, family=FONT_FMLY),
+                       annotation_position='bottom right')
+        layout4 = base_layout('', xaxis_title='Duration (hours)', yaxis_title=f'Price ({sym})')
+        layout4['height'] = 300
         layout4['showlegend'] = True
-        layout4['legend']     = dict(
-            orientation='h', yanchor='bottom', y=1.02,
-            xanchor='left', x=0,
-            font=dict(size=9, family=FONT_FMLY)
-        )
+        layout4['legend'] = dict(orientation='h', yanchor='bottom', y=1.02,
+                                  xanchor='left', x=0, font=dict(size=9, family=FONT_FMLY))
         layout4['margin'] = dict(l=10, r=10, t=40, b=10)
         fig4.update_layout(**layout4)
         st.plotly_chart(fig4, use_container_width=True, config={'displayModeBar': False})
 
-    # ── Chart 5 — Full comparison table with visual indicators ───
     st.markdown(
         '<div class="output-section-title">📋 Output D · Full Price Comparison Table</div>',
         unsafe_allow_html=True
     )
-    st.caption(
-        f'All {len(AIRLINES)} airlines · {source} → {destination} · '
-        f'{stops} · {travel_date.strftime("%d %b %Y")} · '
-        f'{dep_hour:02d}:00 · {int(passengers)} pax · Sorted cheapest first.'
-    )
+    st.caption(f'All {len(AIRLINES)} airlines · {source} → {destination} · '
+               f'{stops} · {travel_date.strftime("%d %b %Y")} · '
+               f'{dep_hour:02d}:00 · {int(passengers)} pax · Sorted cheapest first.')
     table_rows = []
     for al in AIRLINES:
-        p       = al_prices[al]
-        dur     = predict_duration(source, destination, stops)
-        diff_v  = p - price_d
-        saving  = price_d - p
+        p      = al_prices[al]
+        dur    = predict_duration(source, destination, stops)
+        diff_v = p - price_d
+        saving = price_d - p
         table_rows.append({
-            'Airline':              al,
+            'Airline':             al,
             f'Predicted ({sym})':  f'{sym}{p:,.0f}',
-            'vs Your Pick':        (
-                f'🟢 Save {sym}{saving:,.0f}'  if saving >  50
-                else (f'🔴 +{sym}{abs(diff_v):,.0f}' if diff_v > 50
-                      else '🟡 Same')
-            ),
-            'vs Dataset Avg':      (
-                f'✅ {sym}{avg_d-p:,.0f} below avg' if p < avg_d
-                else f'⚠️ {sym}{p-avg_d:,.0f} above avg'
-            ),
+            'vs Your Pick':        (f'🟢 Save {sym}{saving:,.0f}' if saving > 50
+                                    else (f'🔴 +{sym}{abs(diff_v):,.0f}' if diff_v > 50 else '🟡 Same')),
+            'vs Dataset Avg':      (f'✅ {sym}{avg_d-p:,.0f} below avg' if p < avg_d
+                                    else f'⚠️ {sym}{p-avg_d:,.0f} above avg'),
             'Duration':            f'{dur:.1f}h',
-            'Cost/km':             (
-                f'{sym}{p/dist_km:.1f}/km'
-                if dist_km > 0 else 'N/A'
-            ),
-            'Rank':                '',  # filled below
+            'Cost/km':             (f'{sym}{p/dist_km:.1f}/km' if dist_km > 0 else 'N/A'),
+            'Rank':                '',
         })
-    tdf = (
-        pd.DataFrame(table_rows)
-        .assign(Rank=lambda df: [f'#{i+1}' for i in range(len(df))])
-    )
-    # Reorder columns
-    tdf = tdf[['Rank','Airline', f'Predicted ({sym})',
-               'vs Your Pick','vs Dataset Avg','Duration','Cost/km']]
+    tdf = (pd.DataFrame(table_rows)
+           .assign(Rank=lambda df: [f'#{i+1}' for i in range(len(df))]))
+    tdf = tdf[['Rank','Airline', f'Predicted ({sym})', 'vs Your Pick',
+               'vs Dataset Avg','Duration','Cost/km']]
     st.dataframe(tdf, use_container_width=True, hide_index=True)
 
-    # ── Summary insight strip ─────────────────────────────────────
     cheapest_price = al_df.iloc[0]['Price']
     priciest_price = al_df.iloc[-1]['Price']
     cheapest_name  = al_df.iloc[0]['Airline']
@@ -1716,74 +1483,55 @@ if submitted:
                     border-radius:10px;padding:14px 16px;">
             <div style="font-size:0.65rem;font-weight:800;color:#16a34a;
                         text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">
-                🏆 Cheapest Option
-            </div>
+                🏆 Cheapest Option</div>
             <div style="font-family:'Syne',sans-serif;font-size:1.1rem;
                         font-weight:900;color:#0f172a">{cheapest_name}</div>
             <div style="font-size:0.85rem;color:#16a34a;font-weight:700">
-                {sym}{cheapest_price:,.0f}
-            </div>
+                {sym}{cheapest_price:,.0f}</div>
         </div>
         <div style="flex:1;min-width:160px;background:#eff6ff;border:1px solid #bfdbfe;
                     border-radius:10px;padding:14px 16px;">
             <div style="font-size:0.65rem;font-weight:800;color:#0052cc;
                         text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">
-                ⭐ Your Selection
-            </div>
+                ⭐ Your Selection</div>
             <div style="font-family:'Syne',sans-serif;font-size:1.1rem;
                         font-weight:900;color:#0f172a">{airline}</div>
             <div style="font-size:0.85rem;color:#0052cc;font-weight:700">
-                {sym}{price_d:,.0f}
-            </div>
+                {sym}{price_d:,.0f}</div>
         </div>
         <div style="flex:1;min-width:160px;background:#fff7ed;border:1px solid #fed7aa;
                     border-radius:10px;padding:14px 16px;">
             <div style="font-size:0.65rem;font-weight:800;color:#ea580c;
                         text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">
-                💡 Potential Saving
-            </div>
+                💡 Potential Saving</div>
             <div style="font-family:'Syne',sans-serif;font-size:1.1rem;
                         font-weight:900;color:#0f172a">
-                {f"Switch to {cheapest_name}" if saving_vs_pick > 50 else "Best choice!"}
-            </div>
+                {f"Switch to {cheapest_name}" if saving_vs_pick > 50 else "Best choice!"}</div>
             <div style="font-size:0.85rem;color:#ea580c;font-weight:700">
-                {f"{sym}{saving_vs_pick:,.0f} cheaper" if saving_vs_pick > 50 else "Already cheapest"}
-            </div>
+                {f"{sym}{saving_vs_pick:,.0f} cheaper" if saving_vs_pick > 50 else "Already cheapest"}</div>
         </div>
         <div style="flex:1;min-width:160px;background:#fdf4ff;border:1px solid #e9d5ff;
                     border-radius:10px;padding:14px 16px;">
             <div style="font-size:0.65rem;font-weight:800;color:#9333ea;
                         text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">
-                📊 Price Spread
-            </div>
+                📊 Price Spread</div>
             <div style="font-family:'Syne',sans-serif;font-size:1.1rem;
                         font-weight:900;color:#0f172a">
-                {sym}{priciest_price - cheapest_price:,.0f} range
-            </div>
+                {sym}{priciest_price - cheapest_price:,.0f} range</div>
             <div style="font-size:0.85rem;color:#9333ea;font-weight:700">
-                {cheapest_name} → {priciest_name}
-            </div>
+                {cheapest_name} → {priciest_name}</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
 
-
-    # ═══════════════════════════════════════════════════════════════════════════
-
+# ═══════════════════════════════════════════════════════════════════════════
 # Task 3 — SCENARIO COMPARISON
-# Why expander: collapses by default so it does not clutter the main result.
-# Why batch_predict: all scenario prices computed in ONE model call.
-# Why session_state for scenarios: inputs persist across reruns.
 # ═══════════════════════════════════════════════════════════════════════════
 st.divider()
 with st.expander('🔀 Scenario Comparison — Compare up to 3 flight configurations', expanded=False):
-    st.caption(
-        'Define up to 3 different scenarios (vary airline, stops, month, hour). '
-        'Uses the same route as your main search. All prices from the real ML model.'
-    )
+    st.caption('Define up to 3 scenarios to compare. All prices from the real ML model.')
 
-    # Initialise scenario defaults in session state
     if 'scenarios' not in st.session_state:
         st.session_state.scenarios = [
             {'airline':'IndiGo',    'stops':'non-stop','dep_hour':6,  'month':4,'weekday':0,'label':'Scenario A'},
@@ -1797,11 +1545,9 @@ with st.expander('🔀 Scenario Comparison — Compare up to 3 flight configurat
     for sci in range(int(n_sc)):
         sc = st.session_state.scenarios[sci]
         with sc_cols[sci]:
-            st.markdown(
-                f'<div style="font-size:0.65rem;font-weight:800;color:#0052cc;'
-                f'text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px">'
-                f'{sc["label"]}</div>', unsafe_allow_html=True
-            )
+            st.markdown(f'<div style="font-size:0.65rem;font-weight:800;color:#0052cc;'
+                        f'text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px">'
+                        f'{sc["label"]}</div>', unsafe_allow_html=True)
             sc['airline']  = st.selectbox('Airline', AIRLINES,
                                            index=AIRLINES.index(sc['airline']),
                                            key=f'_sc_{sci}_al')
@@ -1823,7 +1569,6 @@ with st.expander('🔀 Scenario Comparison — Compare up to 3 flight configurat
         _sc_src  = st.session_state.get('source', SOURCES[0])
         _sc_dsts = VALID_DESTINATIONS.get(_sc_src, DESTINATIONS)
         _sc_dst  = st.session_state.get('destination', _sc_dsts[0])
-
         _active  = st.session_state.scenarios[:int(n_sc)]
         _sc_durs = [predict_duration(_sc_src, _sc_dst, sc['stops']) for sc in _active]
         _sc_combos = [
@@ -1833,10 +1578,9 @@ with st.expander('🔀 Scenario Comparison — Compare up to 3 flight configurat
                  duration_hours=dur)
             for sc, dur in zip(_active, _sc_durs)
         ]
-        _sc_prices = batch_predict_app(_sc_combos, 1)   # batch: 1 call for all scenarios
+        _sc_prices = batch_predict_app(_sc_combos, 1)
         _sc_min    = min(_sc_prices)
 
-        # Card results
         res_cols = st.columns(int(n_sc))
         for sci, (sc, p_inr, dur) in enumerate(zip(_active, _sc_prices, _sc_durs)):
             p_d  = round(p_inr * fac, 0)
@@ -1862,7 +1606,6 @@ with st.expander('🔀 Scenario Comparison — Compare up to 3 flight configurat
                     f'</div>', unsafe_allow_html=True
                 )
 
-        # Comparison bar chart
         _fig_sc = go.Figure(go.Bar(
             x=[sc['label'] for sc in _active],
             y=[round(p*fac) for p in _sc_prices],
@@ -1881,7 +1624,6 @@ with st.expander('🔀 Scenario Comparison — Compare up to 3 flight configurat
         )
         st.plotly_chart(_fig_sc, use_container_width=True, config={'displayModeBar': False})
 
-        # Saving tip
         if len(_sc_prices) > 1:
             _sorted = sorted(zip(_sc_prices, _active, _sc_durs))
             _cheap_p, _cheap_sc, _ = _sorted[0]
@@ -1893,4 +1635,3 @@ with st.expander('🔀 Scenario Comparison — Compare up to 3 flight configurat
                     f'**{_cheap_sc["label"]}** ({_cheap_sc["airline"]}, '
                     f'{_cheap_sc["stops"]}) to save **{sym}{_saving:,}** per passenger.'
                 )
-
