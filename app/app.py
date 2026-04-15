@@ -777,6 +777,52 @@ hr {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+/* ══ NUCLEAR DROPDOWN FIX ══════════════════════════════════════════
+   Forces white bg + dark text on ALL Streamlit selectboxes in main area
+   -webkit-text-fill-color overrides even inherited color in Chrome/Safari
+   ════════════════════════════════════════════════════════════════ */
+div[data-baseweb="select"] > div:first-child {
+    background-color: #ffffff !important;
+    border: 1.5px solid #c8d6f0 !important;
+    border-radius: 8px !important;
+    min-height: 42px !important;
+}
+div[data-baseweb="select"] > div:first-child:hover {
+    border-color: #0052cc !important;
+    box-shadow: 0 0 0 3px rgba(0,82,204,0.12) !important;
+}
+div[data-baseweb="select"] div[class*="ValueContainer"] > div,
+div[data-baseweb="select"] div[class*="singleValue"],
+div[data-baseweb="select"] [class*="placeholder"],
+div[data-baseweb="select"] input {
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
+}
+div[data-baseweb="select"] svg path { fill: #64748b !important; }
+div[data-baseweb="menu"],
+div[data-baseweb="menu"] ul,
+div[data-baseweb="menu"] li,
+div[data-baseweb="popover"] li,
+li[role="option"] {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+}
+li[role="option"]:hover,
+div[data-baseweb="menu"] li:hover {
+    background-color: #e8f0fe !important;
+    color: #0052cc !important;
+}
+[data-testid="stSidebar"] div[data-baseweb="select"] > div:first-child {
+    background-color: rgba(255,255,255,0.08) !important;
+    border: 1px solid rgba(255,255,255,0.18) !important;
+}
+[data-testid="stSidebar"] div[data-baseweb="select"] div[class*="singleValue"],
+[data-testid="stSidebar"] div[data-baseweb="select"] [class*="placeholder"],
+[data-testid="stSidebar"] div[data-baseweb="select"] input {
+    color: #e2e8f0 !important;
+    -webkit-text-fill-color: #e2e8f0 !important;
+}
+[data-testid="stSidebar"] div[data-baseweb="select"] svg path { fill: #94a3b8 !important; }
 </style>
 """, unsafe_allow_html=True)
 
