@@ -139,36 +139,41 @@ html, body, [class*="css"] {
     color: var(--text-primary);
 }
 
-/* ── SELECTBOX — BULLETPROOF FIX (Main Area) ────────────────────── */
-/* Force white background on ALL select boxes in main content */
+/* ══════════════════════════════════════════════════════════════════
+   THEME-AWARE SELECTBOX FIX
+   Works in BOTH Streamlit light mode AND dark mode
+   Strategy: use CSS custom properties + inherit approach
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── LIGHT MODE (default Streamlit theme) ─────────────────────── */
 div[data-baseweb="select"] > div:first-child {
     background-color: #ffffff !important;
     border: 1.5px solid #c8d6f0 !important;
     border-radius: 8px !important;
     min-height: 42px !important;
-    transition: border-color 0.15s ease !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
 }
-div[data-baseweb="select"] > div:first-child:focus-within,
-div[data-baseweb="select"] > div:first-child:hover {
+div[data-baseweb="select"] > div:first-child:hover,
+div[data-baseweb="select"] > div:first-child:focus-within {
     border-color: #0052cc !important;
     box-shadow: 0 0 0 3px rgba(0,82,204,0.12) !important;
 }
-/* Force dark text on selected value — -webkit-text-fill-color is key! */
+/* Light mode text */
 div[data-baseweb="select"] [class*="singleValue"],
-div[data-baseweb="select"] [class*="placeholder"],
-div[data-baseweb="select"] [class*="ValueContainer"] div,
-div[data-baseweb="select"] input[readonly],
-div[data-baseweb="select"] input {
+div[data-baseweb="select"] [class*="placeholder"] {
     color: #0f172a !important;
     -webkit-text-fill-color: #0f172a !important;
     font-weight: 500 !important;
 }
-/* Dropdown arrow color */
+div[data-baseweb="select"] input {
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
+    caret-color: #0f172a !important;
+}
 div[data-baseweb="select"] svg {
     fill: #64748b !important;
-    color: #64748b !important;
 }
-/* Dropdown open menu items */
+/* Light mode dropdown menu */
 div[data-baseweb="menu"] {
     background: #ffffff !important;
     border: 1.5px solid #c8d6f0 !important;
@@ -176,32 +181,84 @@ div[data-baseweb="menu"] {
     box-shadow: 0 8px 24px rgba(0,82,204,0.12) !important;
 }
 div[data-baseweb="menu"] li,
-li[role="option"],
-div[data-baseweb="popover"] li {
+li[role="option"] {
     color: #0f172a !important;
     background-color: #ffffff !important;
     font-size: 0.88rem !important;
-    padding: 10px 14px !important;
 }
 div[data-baseweb="menu"] li:hover,
-li[role="option"]:hover,
-li[aria-selected="true"] {
+li[role="option"]:hover {
     background-color: #e8f0fe !important;
     color: #0052cc !important;
     font-weight: 600 !important;
 }
+li[aria-selected="true"] {
+    background-color: #dce9ff !important;
+    color: #0052cc !important;
+    font-weight: 600 !important;
+}
 
-/* ── SELECTBOX LABELS — MAIN AREA ───────────────────────────────── */
+/* ── DARK MODE override ───────────────────────────────────────── */
+/* Streamlit dark mode sets data-theme="dark" on <html>
+   and uses background #0e1117 with text rgba(250,250,250,0.87) */
+@media (prefers-color-scheme: dark) {
+    /* Only applies when system is dark AND Streamlit uses system theme */
+    div[data-baseweb="select"] > div:first-child {
+        background-color: #262730 !important;
+        border: 1.5px solid rgba(250,250,250,0.2) !important;
+    }
+    div[data-baseweb="select"] [class*="singleValue"],
+    div[data-baseweb="select"] [class*="placeholder"] {
+        color: rgba(250,250,250,0.87) !important;
+        -webkit-text-fill-color: rgba(250,250,250,0.87) !important;
+    }
+    div[data-baseweb="select"] input {
+        color: rgba(250,250,250,0.87) !important;
+        -webkit-text-fill-color: rgba(250,250,250,0.87) !important;
+    }
+    div[data-baseweb="select"] svg {
+        fill: rgba(250,250,250,0.5) !important;
+    }
+    div[data-baseweb="menu"] {
+        background: #1e1e2e !important;
+        border: 1px solid rgba(250,250,250,0.15) !important;
+    }
+    div[data-baseweb="menu"] li,
+    li[role="option"] {
+        color: rgba(250,250,250,0.87) !important;
+        background-color: #1e1e2e !important;
+    }
+    div[data-baseweb="menu"] li:hover,
+    li[role="option"]:hover {
+        background-color: #2d3a5e !important;
+        color: #60a5fa !important;
+    }
+}
+
+/* ── STREAMLIT DARK CLASS override (when Streamlit forces dark) ── */
+/* Streamlit injects .stApp with dark bg when dark theme is selected */
+[data-testid="stAppViewContainer"][style*="background: rgb(14, 17, 23)"] div[data-baseweb="select"] > div:first-child,
+[data-testid="stAppViewContainer"][style*="background-color: rgb(14, 17, 23)"] div[data-baseweb="select"] > div:first-child {
+    background-color: #262730 !important;
+    border: 1.5px solid rgba(250,250,250,0.2) !important;
+}
+
+/* Universal fallback: inherit color from theme context */
+div[data-baseweb="select"] * {
+    box-sizing: border-box;
+}
+
+/* ── LABELS ──────────────────────────────────────────────────── */
 .stSelectbox label {
     font-size: 0.78rem !important;
     font-weight: 700 !important;
-    color: #64748b !important;
     text-transform: uppercase !important;
     letter-spacing: 0.8px !important;
     margin-bottom: 4px !important;
+    /* Don't force color — inherit from theme */
 }
 
-/* ── SIDEBAR SELECTBOX OVERRIDE (dark theme) ─────────────────────── */
+/* ── SIDEBAR SELECTBOX (always dark background) ──────────────── */
 [data-testid="stSidebar"] div[data-baseweb="select"] > div:first-child {
     background-color: rgba(255,255,255,0.10) !important;
     border: 1px solid rgba(255,255,255,0.20) !important;
@@ -222,10 +279,11 @@ li[aria-selected="true"] {
 [data-testid="stSidebar"] li[role="option"],
 [data-testid="stSidebar"] div[data-baseweb="menu"] li {
     color: #e2e8f0 !important;
-    background: transparent !important;
+    background-color: #1e2d50 !important;
 }
 [data-testid="stSidebar"] li[role="option"]:hover {
-    background-color: rgba(0,82,204,0.3) !important;
+    background-color: rgba(0,82,204,0.35) !important;
+    color: #93c5fd !important;
 }
 
 /* ── SIDEBAR ─────────────────────────────────────────────────────── */
@@ -877,6 +935,70 @@ div[data-baseweb="menu"] li:hover {
 </style>
 """, unsafe_allow_html=True)
 
+
+
+# ── JavaScript: detect Streamlit theme and apply dynamic CSS ─────────────────
+# This JS snippet runs in the browser and adds a 'dark-mode' class to body
+# when Streamlit is in dark mode, enabling the CSS :is(body.dark-mode) selectors
+st.markdown("""
+<script>
+(function() {
+    function applyTheme() {
+        const bg = window.getComputedStyle(document.body).backgroundColor;
+        const rgb = bg.match(/\\d+/g);
+        const isDark = rgb && (parseInt(rgb[0]) + parseInt(rgb[1]) + parseInt(rgb[2])) < 200;
+        const selects = document.querySelectorAll('div[data-baseweb="select"] > div:first-child');
+        const menus = document.querySelectorAll('div[data-baseweb="menu"]');
+        const values = document.querySelectorAll(
+            'div[data-baseweb="select"] [class*="singleValue"], ' +
+            'div[data-baseweb="select"] [class*="placeholder"], ' +
+            'div[data-baseweb="select"] input'
+        );
+
+        if (isDark) {
+            selects.forEach(el => {
+                el.style.setProperty('background-color', '#262730', 'important');
+                el.style.setProperty('border', '1.5px solid rgba(250,250,250,0.2)', 'important');
+            });
+            menus.forEach(el => {
+                el.style.setProperty('background', '#1e1e2e', 'important');
+            });
+            values.forEach(el => {
+                el.style.setProperty('color', 'rgba(250,250,250,0.87)', 'important');
+                el.style.setProperty('-webkit-text-fill-color', 'rgba(250,250,250,0.87)', 'important');
+            });
+            document.querySelectorAll('li[role="option"]').forEach(el => {
+                el.style.setProperty('color', 'rgba(250,250,250,0.87)', 'important');
+                el.style.setProperty('background-color', '#1e1e2e', 'important');
+            });
+        } else {
+            selects.forEach(el => {
+                el.style.setProperty('background-color', '#ffffff', 'important');
+                el.style.setProperty('border', '1.5px solid #c8d6f0', 'important');
+            });
+            values.forEach(el => {
+                el.style.setProperty('color', '#0f172a', 'important');
+                el.style.setProperty('-webkit-text-fill-color', '#0f172a', 'important');
+            });
+            menus.forEach(el => {
+                el.style.setProperty('background', '#ffffff', 'important');
+            });
+            document.querySelectorAll('li[role="option"]').forEach(el => {
+                el.style.setProperty('color', '#0f172a', 'important');
+                el.style.setProperty('background-color', '#ffffff', 'important');
+            });
+        }
+    }
+
+    // Run immediately and on every DOM change (Streamlit re-renders widgets)
+    applyTheme();
+    const observer = new MutationObserver(applyTheme);
+    observer.observe(document.body, { childList: true, subtree: true });
+    // Also run on theme toggle
+    window.addEventListener('message', applyTheme);
+})();
+</script>
+""", unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  ① INTERACTIVE SIDEBAR
