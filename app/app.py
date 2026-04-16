@@ -139,42 +139,93 @@ html, body, [class*="css"] {
     color: var(--text-primary);
 }
 
-/* ── SELECTBOX — MAIN AREA ──────────────────────────────────────── */
-/* Container */
-.main div[data-baseweb="select"] > div {
-    background-color: #f8faff !important;
-    border: 1.5px solid var(--border) !important;
-    border-radius: var(--radius-sm) !important;
-    color: #0f172a !important;
+/* ── SELECTBOX — BULLETPROOF FIX (Main Area) ────────────────────── */
+/* Force white background on ALL select boxes in main content */
+div[data-baseweb="select"] > div:first-child {
+    background-color: #ffffff !important;
+    border: 1.5px solid #c8d6f0 !important;
+    border-radius: 8px !important;
+    min-height: 42px !important;
+    transition: border-color 0.15s ease !important;
 }
-/* Selected value text */
-.main div[data-baseweb="select"] span,
-.main div[data-baseweb="select"] div[class*="singleValue"],
-.main div[data-baseweb="select"] div[class*="placeholder"] {
-    color: #0f172a !important;
+div[data-baseweb="select"] > div:first-child:focus-within,
+div[data-baseweb="select"] > div:first-child:hover {
+    border-color: #0052cc !important;
+    box-shadow: 0 0 0 3px rgba(0,82,204,0.12) !important;
 }
-/* Dropdown open menu */
-div[data-baseweb="popover"] li,
-ul[role="listbox"] li {
+/* Force dark text on selected value — -webkit-text-fill-color is key! */
+div[data-baseweb="select"] [class*="singleValue"],
+div[data-baseweb="select"] [class*="placeholder"],
+div[data-baseweb="select"] [class*="ValueContainer"] div,
+div[data-baseweb="select"] input[readonly],
+div[data-baseweb="select"] input {
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
+    font-weight: 500 !important;
+}
+/* Dropdown arrow color */
+div[data-baseweb="select"] svg {
+    fill: #64748b !important;
+    color: #64748b !important;
+}
+/* Dropdown open menu items */
+div[data-baseweb="menu"] {
+    background: #ffffff !important;
+    border: 1.5px solid #c8d6f0 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 8px 24px rgba(0,82,204,0.12) !important;
+}
+div[data-baseweb="menu"] li,
+li[role="option"],
+div[data-baseweb="popover"] li {
     color: #0f172a !important;
     background-color: #ffffff !important;
+    font-size: 0.88rem !important;
+    padding: 10px 14px !important;
 }
-ul[role="listbox"] li:hover {
+div[data-baseweb="menu"] li:hover,
+li[role="option"]:hover,
+li[aria-selected="true"] {
     background-color: #e8f0fe !important;
-}
-/* Focus ring */
-.main div[data-baseweb="select"] > div:focus-within {
-    border-color: var(--primary) !important;
-    box-shadow: 0 0 0 3px rgba(0,82,204,0.1) !important;
+    color: #0052cc !important;
+    font-weight: 600 !important;
 }
 
 /* ── SELECTBOX LABELS — MAIN AREA ───────────────────────────────── */
-.main .stSelectbox label {
+.stSelectbox label {
     font-size: 0.78rem !important;
-    font-weight: 600 !important;
-    color: var(--text-secondary) !important;
+    font-weight: 700 !important;
+    color: #64748b !important;
     text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
+    letter-spacing: 0.8px !important;
+    margin-bottom: 4px !important;
+}
+
+/* ── SIDEBAR SELECTBOX OVERRIDE (dark theme) ─────────────────────── */
+[data-testid="stSidebar"] div[data-baseweb="select"] > div:first-child {
+    background-color: rgba(255,255,255,0.10) !important;
+    border: 1px solid rgba(255,255,255,0.20) !important;
+}
+[data-testid="stSidebar"] div[data-baseweb="select"] [class*="singleValue"],
+[data-testid="stSidebar"] div[data-baseweb="select"] [class*="placeholder"],
+[data-testid="stSidebar"] div[data-baseweb="select"] input {
+    color: #e2e8f0 !important;
+    -webkit-text-fill-color: #e2e8f0 !important;
+}
+[data-testid="stSidebar"] div[data-baseweb="select"] svg {
+    fill: #94a3b8 !important;
+}
+[data-testid="stSidebar"] div[data-baseweb="menu"] {
+    background: #1e2d50 !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+}
+[data-testid="stSidebar"] li[role="option"],
+[data-testid="stSidebar"] div[data-baseweb="menu"] li {
+    color: #e2e8f0 !important;
+    background: transparent !important;
+}
+[data-testid="stSidebar"] li[role="option"]:hover {
+    background-color: rgba(0,82,204,0.3) !important;
 }
 
 /* ── SIDEBAR ─────────────────────────────────────────────────────── */
