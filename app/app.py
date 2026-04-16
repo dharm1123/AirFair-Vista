@@ -129,13 +129,14 @@ html, body, [class*="css"] {
         radial-gradient(ellipse at 80% 100%, rgba(245,166,35,0.04) 0%, transparent 60%);
 }
 
-/* DARK MODE FIX */
-[data-testid="stAppViewContainer"][style*="rgb(14, 17, 23)"] .stApp {
+/* DARK MODE FULL THEME */
+html[data-theme="dark"] .stApp {
     background: #0e1117 !important;
     background-image:
         radial-gradient(ellipse at 20% 0%, rgba(0,82,204,0.15) 0%, transparent 60%),
         radial-gradient(ellipse at 80% 100%, rgba(245,166,35,0.08) 0%, transparent 60%);
 }
+
 * { box-sizing: border-box; }
 
 /* ── MAIN AREA TEXT ─────────────────────────────────────────────── */
@@ -985,6 +986,48 @@ li[role="option"] {
 [data-testid="stSidebar"] div[data-baseweb="select"] * {
     color: #e2e8f0 !important;
     -webkit-text-fill-color: #e2e8f0 !important;
+}
+
+
+/* FULL DARK MODE UI FIX */
+html[data-theme="dark"] {
+    --bg-card: #1e1e2e;
+    --text-primary: rgba(250,250,250,0.9);
+    --text-secondary: rgba(250,250,250,0.6);
+    --border: rgba(250,250,250,0.1);
+}
+
+/* Cards */
+html[data-theme="dark"] .form-card,
+html[data-theme="dark"] [data-testid="stForm"],
+html[data-theme="dark"] .result-ticket {
+    background: #1e1e2e !important;
+    border: 1px solid rgba(250,250,250,0.1) !important;
+}
+
+/* Inputs */
+html[data-theme="dark"] input,
+html[data-theme="dark"] textarea {
+    background-color: #262730 !important;
+    color: rgba(250,250,250,0.9) !important;
+}
+
+/* Number + date */
+html[data-theme="dark"] .stNumberInput input,
+html[data-theme="dark"] [data-testid="stDateInput"] input {
+    background-color: #262730 !important;
+    color: rgba(250,250,250,0.9) !important;
+}
+
+/* Labels */
+html[data-theme="dark"] label {
+    color: rgba(250,250,250,0.7) !important;
+}
+
+/* Ticket body */
+html[data-theme="dark"] .ticket-body,
+html[data-theme="dark"] .ticket-footer {
+    background: #1e1e2e !important;
 }
 
 </style>
