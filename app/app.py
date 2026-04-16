@@ -128,6 +128,14 @@ html, body, [class*="css"] {
         radial-gradient(ellipse at 20% 0%, rgba(0,82,204,0.06) 0%, transparent 60%),
         radial-gradient(ellipse at 80% 100%, rgba(245,166,35,0.04) 0%, transparent 60%);
 }
+
+/* DARK MODE FIX */
+[data-testid="stAppViewContainer"][style*="rgb(14, 17, 23)"] .stApp {
+    background: #0e1117 !important;
+    background-image:
+        radial-gradient(ellipse at 20% 0%, rgba(0,82,204,0.15) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 100%, rgba(245,166,35,0.08) 0%, transparent 60%);
+}
 * { box-sizing: border-box; }
 
 /* ── MAIN AREA TEXT ─────────────────────────────────────────────── */
