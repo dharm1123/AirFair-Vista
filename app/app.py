@@ -886,10 +886,7 @@ hr {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-/* ══ NUCLEAR DROPDOWN FIX ══════════════════════════════════════════
-   Forces white bg + dark text on ALL Streamlit selectboxes in main area
-   -webkit-text-fill-color overrides even inherited color in Chrome/Safari
-   ════════════════════════════════════════════════════════════════ */
+
 div[data-baseweb="select"] > div:first-child {
     background-color: #ffffff !important;
     border: 1.5px solid #c8d6f0 !important;
@@ -932,6 +929,56 @@ div[data-baseweb="menu"] li:hover {
     -webkit-text-fill-color: #e2e8f0 !important;
 }
 [data-testid="stSidebar"] div[data-baseweb="select"] svg path { fill: #94a3b8 !important; }
+
+/* ✅ FINAL UNIVERSAL TEXT VISIBILITY FIX */
+
+:root {
+    --select-text-light: #0f172a;
+    --select-bg-light: #ffffff;
+    --select-border-light: #c8d6f0;
+
+    --select-text-dark: rgba(250,250,250,0.87);
+    --select-bg-dark: #262730;
+    --select-border-dark: rgba(250,250,250,0.2);
+}
+
+/* Default = light */
+div[data-baseweb="select"] > div:first-child {
+    background-color: var(--select-bg-light) !important;
+    border: 1.5px solid var(--select-border-light) !important;
+}
+
+/* Text always visible */
+div[data-baseweb="select"] * {
+    color: var(--select-text-light) !important;
+    -webkit-text-fill-color: var(--select-text-light) !important;
+}
+
+/* DARK MODE (Streamlit detection) */
+[data-testid="stAppViewContainer"][style*="rgb(14, 17, 23)"] div[data-baseweb="select"] > div:first-child {
+    background-color: var(--select-bg-dark) !important;
+    border: 1.5px solid var(--select-border-dark) !important;
+}
+
+[data-testid="stAppViewContainer"][style*="rgb(14, 17, 23)"] div[data-baseweb="select"] * {
+    color: var(--select-text-dark) !important;
+    -webkit-text-fill-color: var(--select-text-dark) !important;
+}
+
+/* Dropdown menu fix */
+div[data-baseweb="menu"],
+div[data-baseweb="menu"] li,
+li[role="option"] {
+    background-color: inherit !important;
+    color: inherit !important;
+}
+
+/* Sidebar always readable */
+[data-testid="stSidebar"] div[data-baseweb="select"] * {
+    color: #e2e8f0 !important;
+    -webkit-text-fill-color: #e2e8f0 !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
