@@ -124,6 +124,188 @@ st.markdown("""
     --radius-xl:     24px;
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   DARK MODE — Override ALL CSS variables so every component adapts
+   Streamlit sets data-theme="dark" on <html> when dark is chosen
+   ═══════════════════════════════════════════════════════════════════ */
+[data-theme="dark"] {
+    --bg-main:        #0e1117;
+    --bg-card:        #1a1d2e;
+    --bg-sidebar:     #05080f;
+    --text-primary:   rgba(250,250,250,0.90);
+    --text-secondary: #94a3b8;
+    --text-muted:     rgba(250,250,250,0.45);
+    --border:         rgba(250,250,250,0.10);
+    --border-focus:   #4d8bff;
+    --primary-light:  rgba(0,82,204,0.25);
+    --accent-light:   rgba(245,166,35,0.12);
+    --shadow-sm:      0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3);
+    --shadow-md:      0 4px 16px rgba(0,0,0,0.5), 0 2px 6px rgba(0,0,0,0.4);
+    --shadow-lg:      0 8px 32px rgba(0,0,0,0.6), 0 4px 12px rgba(0,0,0,0.5);
+}
+
+/* Dark app background */
+[data-theme="dark"] .stApp {
+    background: var(--bg-main) !important;
+    background-image:
+        radial-gradient(ellipse at 20% 0%, rgba(0,82,204,0.14) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 100%, rgba(245,166,35,0.07) 0%, transparent 60%) !important;
+}
+
+/* Dark global text */
+[data-theme="dark"] html,
+[data-theme="dark"] body {
+    color: var(--text-primary) !important;
+}
+[data-theme="dark"] .main .block-container p,
+[data-theme="dark"] .main .block-container span,
+[data-theme="dark"] .main .block-container div,
+[data-theme="dark"] .main .block-container label {
+    color: var(--text-primary);
+}
+
+/* ── DARK SELECTBOX ──────────────────────────────────────────────── */
+[data-theme="dark"] div[data-baseweb="select"] > div:first-child {
+    background-color: #1e2235 !important;
+    border: 1.5px solid rgba(250,250,250,0.18) !important;
+}
+[data-theme="dark"] div[data-baseweb="select"] > div:first-child:hover,
+[data-theme="dark"] div[data-baseweb="select"] > div:first-child:focus-within {
+    border-color: #4d8bff !important;
+    box-shadow: 0 0 0 3px rgba(77,139,255,0.18) !important;
+}
+[data-theme="dark"] div[data-baseweb="select"] [class*="singleValue"],
+[data-theme="dark"] div[data-baseweb="select"] [class*="placeholder"],
+[data-theme="dark"] div[data-baseweb="select"] input {
+    color: rgba(250,250,250,0.90) !important;
+    -webkit-text-fill-color: rgba(250,250,250,0.90) !important;
+    caret-color: rgba(250,250,250,0.90) !important;
+    font-weight: 500 !important;
+}
+[data-theme="dark"] div[data-baseweb="select"] svg {
+    fill: rgba(250,250,250,0.55) !important;
+}
+[data-theme="dark"] div[data-baseweb="menu"] {
+    background: #1e2235 !important;
+    border: 1px solid rgba(250,250,250,0.14) !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5) !important;
+}
+[data-theme="dark"] div[data-baseweb="menu"] li,
+[data-theme="dark"] li[role="option"] {
+    color: rgba(250,250,250,0.90) !important;
+    background-color: #1e2235 !important;
+    font-size: 0.88rem !important;
+}
+[data-theme="dark"] div[data-baseweb="menu"] li:hover,
+[data-theme="dark"] li[role="option"]:hover {
+    background-color: rgba(77,139,255,0.22) !important;
+    color: #90bcff !important;
+}
+[data-theme="dark"] li[aria-selected="true"] {
+    background-color: rgba(77,139,255,0.30) !important;
+    color: #90bcff !important;
+    font-weight: 600 !important;
+}
+[data-theme="dark"] .stSelectbox label {
+    color: rgba(250,250,250,0.55) !important;
+}
+
+/* ── DARK INPUTS ─────────────────────────────────────────────────── */
+[data-theme="dark"] input,
+[data-theme="dark"] textarea {
+    color: rgba(250,250,250,0.90) !important;
+    background-color: #1e2235 !important;
+    -webkit-text-fill-color: rgba(250,250,250,0.90) !important;
+}
+[data-theme="dark"] .stNumberInput > div > div > input,
+[data-theme="dark"] [data-testid="stDateInput"] > div > div > input {
+    background: #1e2235 !important;
+    border: 1.5px solid rgba(250,250,250,0.18) !important;
+    color: rgba(250,250,250,0.90) !important;
+    -webkit-text-fill-color: rgba(250,250,250,0.90) !important;
+}
+[data-theme="dark"] [data-testid="stDateInput"] label,
+[data-theme="dark"] .stNumberInput label,
+[data-theme="dark"] .stSlider label {
+    color: rgba(250,250,250,0.55) !important;
+}
+
+/* ── DARK FORM CARD ──────────────────────────────────────────────── */
+[data-theme="dark"] .form-card,
+[data-theme="dark"] [data-testid="stForm"] {
+    background: var(--bg-card) !important;
+    border-color: var(--border) !important;
+}
+
+/* ── DARK RESULT TICKET ──────────────────────────────────────────── */
+[data-theme="dark"] .ticket-body {
+    background: var(--bg-card) !important;
+}
+[data-theme="dark"] .ticket-footer {
+    background: #141726 !important;
+    border-color: var(--border) !important;
+}
+
+/* ── DARK METRIC CARDS ───────────────────────────────────────────── */
+[data-theme="dark"] [data-testid="stMetric"] {
+    background: var(--bg-card) !important;
+    border-color: var(--border) !important;
+}
+
+/* ── DARK EXPANDER ───────────────────────────────────────────────── */
+[data-theme="dark"] [data-testid="stExpander"] {
+    background: var(--bg-card) !important;
+    border-color: var(--border) !important;
+}
+[data-theme="dark"] [data-testid="stExpanderDetails"] {
+    background: var(--bg-card) !important;
+}
+
+/* ── DARK DATAFRAME ──────────────────────────────────────────────── */
+[data-theme="dark"] .stDataFrame {
+    border-color: var(--border) !important;
+}
+
+/* ── DARK DIVIDER / HR ───────────────────────────────────────────── */
+[data-theme="dark"] hr {
+    border-color: var(--border) !important;
+}
+
+/* ── DARK DURATION CHIP ──────────────────────────────────────────── */
+[data-theme="dark"] .duration-chip {
+    background: rgba(0,82,204,0.20) !important;
+    border-color: rgba(77,139,255,0.30) !important;
+    color: #90bcff !important;
+}
+[data-theme="dark"] .duration-chip .dur-val {
+    color: #90bcff !important;
+}
+
+/* ── DARK RADIO / CHECKBOX ───────────────────────────────────────── */
+[data-theme="dark"] .stRadio label,
+[data-theme="dark"] .stCheckbox label,
+[data-theme="dark"] .stRadio p,
+[data-theme="dark"] [data-testid="stCaptionContainer"] {
+    color: rgba(250,250,250,0.70) !important;
+}
+
+/* ── DARK VALID BADGE ────────────────────────────────────────────── */
+[data-theme="dark"] .valid-badge {
+    background: rgba(34,197,94,0.15) !important;
+    border-color: rgba(34,197,94,0.35) !important;
+    color: #4ade80 !important;
+}
+
+/* ── DARK STMARKDOWN ─────────────────────────────────────────────── */
+[data-theme="dark"] .stMarkdown p,
+[data-theme="dark"] .stMarkdown span,
+[data-theme="dark"] .stMarkdown h1,
+[data-theme="dark"] .stMarkdown h2,
+[data-theme="dark"] .stMarkdown h3,
+[data-theme="dark"] .stMarkdown li {
+    color: var(--text-primary) !important;
+}
+
 /* ── GLOBAL ─────────────────────────────────────────────────────── */
 html, body, [class*="css"] {
     font-family: 'Plus Jakarta Sans', sans-serif !important;
@@ -139,7 +321,7 @@ html, body, [class*="css"] {
 * { box-sizing: border-box; }
 
 /* ── MAIN AREA TEXT ─────────────────────────────────────────────── */
-/* Ensure all main content text is dark */
+/* Ensure all main content text is dark in light mode */
 .main .block-container p,
 .main .block-container span,
 .main .block-container div,
@@ -206,81 +388,32 @@ li[aria-selected="true"] {
     font-weight: 600 !important;
 }
 
-/* ── DARK MODE override ───────────────────────────────────────── */
-/* Strategy: target BOTH OS-level dark AND Streamlit manual dark  */
-/* Streamlit sets data-theme="dark" on <html> when dark chosen    */
-
+/* ── OS-LEVEL dark media query fallback ─────────────────────────── */
+/* Fires when system is dark AND Streamlit is set to "System" theme  */
 @media (prefers-color-scheme: dark) {
     div[data-baseweb="select"] > div:first-child {
-        background-color: #262730 !important;
-        border: 1.5px solid rgba(250,250,250,0.2) !important;
+        background-color: #1e2235 !important;
+        border: 1.5px solid rgba(250,250,250,0.18) !important;
     }
     div[data-baseweb="select"] [class*="singleValue"],
-    div[data-baseweb="select"] [class*="placeholder"] {
-        color: rgba(250,250,250,0.87) !important;
-        -webkit-text-fill-color: rgba(250,250,250,0.87) !important;
-    }
+    div[data-baseweb="select"] [class*="placeholder"],
     div[data-baseweb="select"] input {
-        color: rgba(250,250,250,0.87) !important;
-        -webkit-text-fill-color: rgba(250,250,250,0.87) !important;
-        caret-color: rgba(250,250,250,0.87) !important;
+        color: rgba(250,250,250,0.90) !important;
+        -webkit-text-fill-color: rgba(250,250,250,0.90) !important;
     }
     div[data-baseweb="select"] svg { fill: rgba(250,250,250,0.5) !important; }
     div[data-baseweb="menu"] {
-        background: #1e1e2e !important;
-        border: 1px solid rgba(250,250,250,0.15) !important;
+        background: #1e2235 !important;
+        border: 1px solid rgba(250,250,250,0.14) !important;
     }
     div[data-baseweb="menu"] li, li[role="option"] {
-        color: rgba(250,250,250,0.87) !important;
-        background-color: #1e1e2e !important;
+        color: rgba(250,250,250,0.90) !important;
+        background-color: #1e2235 !important;
     }
     div[data-baseweb="menu"] li:hover, li[role="option"]:hover {
-        background-color: #2d3a5e !important;
-        color: #60a5fa !important;
+        background-color: rgba(77,139,255,0.22) !important;
+        color: #90bcff !important;
     }
-}
-
-/* ── Streamlit manual Dark theme (data-theme="dark" on <html>) ── */
-[data-theme="dark"] div[data-baseweb="select"] > div:first-child {
-    background-color: #262730 !important;
-    border: 1.5px solid rgba(250,250,250,0.2) !important;
-}
-[data-theme="dark"] div[data-baseweb="select"] [class*="singleValue"],
-[data-theme="dark"] div[data-baseweb="select"] [class*="placeholder"] {
-    color: rgba(250,250,250,0.87) !important;
-    -webkit-text-fill-color: rgba(250,250,250,0.87) !important;
-}
-[data-theme="dark"] div[data-baseweb="select"] input {
-    color: rgba(250,250,250,0.87) !important;
-    -webkit-text-fill-color: rgba(250,250,250,0.87) !important;
-    caret-color: rgba(250,250,250,0.87) !important;
-}
-[data-theme="dark"] div[data-baseweb="select"] svg {
-    fill: rgba(250,250,250,0.5) !important;
-}
-[data-theme="dark"] div[data-baseweb="menu"] {
-    background: #1e1e2e !important;
-    border: 1px solid rgba(250,250,250,0.15) !important;
-}
-[data-theme="dark"] div[data-baseweb="menu"] li,
-[data-theme="dark"] li[role="option"] {
-    color: rgba(250,250,250,0.87) !important;
-    background-color: #1e1e2e !important;
-}
-[data-theme="dark"] div[data-baseweb="menu"] li:hover,
-[data-theme="dark"] li[role="option"]:hover {
-    background-color: #2d3a5e !important;
-    color: #60a5fa !important;
-}
-[data-theme="dark"] li[aria-selected="true"] {
-    background-color: #1e3a6e !important;
-    color: #60a5fa !important;
-}
-[data-theme="dark"] .stSelectbox label { color: #94a3b8 !important; }
-[data-theme="dark"] input, [data-theme="dark"] textarea {
-    color: rgba(250,250,250,0.87) !important;
-    background-color: #262730 !important;
-    -webkit-text-fill-color: rgba(250,250,250,0.87) !important;
 }
 
 /* ── LABELS ──────────────────────────────────────────────────── */
@@ -992,24 +1125,28 @@ st.markdown("""
 <script>
 (function() {
     function applyTheme() {
-        // ── Reliable dark-mode detection ────────────────────────────────
-        // 1) Check Streamlit's own data-theme attribute (set when user picks Dark)
+        // ── Reliable dark-mode detection ─────────────────────────────
+        // Priority 1: Streamlit sets data-theme="dark" on <html> when
+        //             the user manually picks Dark in the theme switcher
         const htmlTheme = document.documentElement.getAttribute('data-theme');
-        let isDark = htmlTheme === 'dark';
+        let isDark = (htmlTheme === 'dark');
 
         if (!isDark) {
-            // 2) Check stAppViewContainer background (most reliable Streamlit target)
+            // Priority 2: Check the actual app container background
+            // (NOT document.body — that is often transparent and
+            //  gave false positives: rgba(0,0,0,0) has sum=0 < 200)
             const appEl = document.querySelector('[data-testid="stAppViewContainer"]')
-                       || document.querySelector('.stApp');
-            const bgSrc = appEl || document.body;
-            const bg  = window.getComputedStyle(bgSrc).backgroundColor;
-            const rgb = bg.match(/\\d+/g);
+                       || document.querySelector('.stApp')
+                       || document.body;
+            const bg  = window.getComputedStyle(appEl).backgroundColor;
+            const rgb = bg.match(/\d+/g);
             if (rgb && rgb.length >= 3) {
+                // Parse alpha — rgb[3] is 0–1 from rgba()
                 const alpha = rgb.length >= 4 ? parseFloat(rgb[3]) : 1;
                 const sum   = parseInt(rgb[0]) + parseInt(rgb[1]) + parseInt(rgb[2]);
-                // IMPORTANT: only treat as dark when alpha > 0 AND sum is low.
-                // rgba(0,0,0,0) is transparent (NOT dark) — old bug was treating it as dark!
-                isDark = alpha !== 0 && sum > 0 && sum < 200;
+                // Only treat as dark when alpha>0 AND brightness is low.
+                // rgba(0,0,0,0) is TRANSPARENT — not dark! Old code caught this as dark.
+                isDark = (alpha > 0) && (sum > 0) && (sum < 200);
             }
         }
         const selects = document.querySelectorAll('div[data-baseweb="select"] > div:first-child');
