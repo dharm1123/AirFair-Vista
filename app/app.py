@@ -128,15 +128,6 @@ html, body, [class*="css"] {
         radial-gradient(ellipse at 20% 0%, rgba(0,82,204,0.06) 0%, transparent 60%),
         radial-gradient(ellipse at 80% 100%, rgba(245,166,35,0.04) 0%, transparent 60%);
 }
-
-/* DARK MODE FULL THEME */
-html[data-theme="dark"] .stApp {
-    background: #0e1117 !important;
-    background-image:
-        radial-gradient(ellipse at 20% 0%, rgba(0,82,204,0.15) 0%, transparent 60%),
-        radial-gradient(ellipse at 80% 100%, rgba(245,166,35,0.08) 0%, transparent 60%);
-}
-
 * { box-sizing: border-box; }
 
 /* ── MAIN AREA TEXT ─────────────────────────────────────────────── */
@@ -264,7 +255,14 @@ div[data-baseweb="select"] * {
     text-transform: uppercase !important;
     letter-spacing: 0.8px !important;
     margin-bottom: 4px !important;
-    /* Don't force color — inherit from theme */
+    /* LIGHT MODE: medium-contrast grey visible on white */
+    color: #475569 !important;
+}
+/* DARK MODE: bright enough to contrast against #0e1117 dark bg */
+@media (prefers-color-scheme: dark) {
+    .stSelectbox label {
+        color: #94a3b8 !important;
+    }
 }
 
 /* ── SIDEBAR SELECTBOX (always dark background) ──────────────── */
@@ -393,18 +391,24 @@ input, textarea {
 [data-testid="stDateInput"] label {
     font-size: 0.78rem !important;
     font-weight: 600 !important;
-    color: var(--text-secondary) !important;
+    color: #475569 !important;
     text-transform: uppercase !important;
     letter-spacing: 0.5px !important;
+}
+@media (prefers-color-scheme: dark) {
+    [data-testid="stDateInput"] label { color: #94a3b8 !important; }
 }
 
 /* ── SLIDER ─────────────────────────────────────────────────────── */
 .stSlider label {
     font-size: 0.78rem !important;
     font-weight: 600 !important;
-    color: var(--text-secondary) !important;
+    color: #475569 !important;
     text-transform: uppercase !important;
     letter-spacing: 0.5px !important;
+}
+@media (prefers-color-scheme: dark) {
+    .stSlider label { color: #94a3b8 !important; }
 }
 .stSlider > div > div > div > div {
     background: var(--primary) !important;
@@ -895,7 +899,10 @@ hr {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
+/* ══ NUCLEAR DROPDOWN FIX ══════════════════════════════════════════
+   Forces white bg + dark text on ALL Streamlit selectboxes in main area
+   -webkit-text-fill-color overrides even inherited color in Chrome/Safari
+   ════════════════════════════════════════════════════════════════ */
 div[data-baseweb="select"] > div:first-child {
     background-color: #ffffff !important;
     border: 1.5px solid #c8d6f0 !important;
@@ -938,98 +945,6 @@ div[data-baseweb="menu"] li:hover {
     -webkit-text-fill-color: #e2e8f0 !important;
 }
 [data-testid="stSidebar"] div[data-baseweb="select"] svg path { fill: #94a3b8 !important; }
-
-/* ✅ FINAL UNIVERSAL TEXT VISIBILITY FIX */
-
-:root {
-    --select-text-light: #0f172a;
-    --select-bg-light: #ffffff;
-    --select-border-light: #c8d6f0;
-
-    --select-text-dark: rgba(250,250,250,0.87);
-    --select-bg-dark: #262730;
-    --select-border-dark: rgba(250,250,250,0.2);
-}
-
-/* Default = light */
-div[data-baseweb="select"] > div:first-child {
-    background-color: var(--select-bg-light) !important;
-    border: 1.5px solid var(--select-border-light) !important;
-}
-
-/* Text always visible */
-div[data-baseweb="select"] * {
-    color: var(--select-text-light) !important;
-    -webkit-text-fill-color: var(--select-text-light) !important;
-}
-
-/* DARK MODE (Streamlit detection) */
-[data-testid="stAppViewContainer"][style*="rgb(14, 17, 23)"] div[data-baseweb="select"] > div:first-child {
-    background-color: var(--select-bg-dark) !important;
-    border: 1.5px solid var(--select-border-dark) !important;
-}
-
-[data-testid="stAppViewContainer"][style*="rgb(14, 17, 23)"] div[data-baseweb="select"] * {
-    color: var(--select-text-dark) !important;
-    -webkit-text-fill-color: var(--select-text-dark) !important;
-}
-
-/* Dropdown menu fix */
-div[data-baseweb="menu"],
-div[data-baseweb="menu"] li,
-li[role="option"] {
-    background-color: inherit !important;
-    color: inherit !important;
-}
-
-/* Sidebar always readable */
-[data-testid="stSidebar"] div[data-baseweb="select"] * {
-    color: #e2e8f0 !important;
-    -webkit-text-fill-color: #e2e8f0 !important;
-}
-
-
-/* FULL DARK MODE UI FIX */
-html[data-theme="dark"] {
-    --bg-card: #1e1e2e;
-    --text-primary: rgba(250,250,250,0.9);
-    --text-secondary: rgba(250,250,250,0.6);
-    --border: rgba(250,250,250,0.1);
-}
-
-/* Cards */
-html[data-theme="dark"] .form-card,
-html[data-theme="dark"] [data-testid="stForm"],
-html[data-theme="dark"] .result-ticket {
-    background: #1e1e2e !important;
-    border: 1px solid rgba(250,250,250,0.1) !important;
-}
-
-/* Inputs */
-html[data-theme="dark"] input,
-html[data-theme="dark"] textarea {
-    background-color: #262730 !important;
-    color: rgba(250,250,250,0.9) !important;
-}
-
-/* Number + date */
-html[data-theme="dark"] .stNumberInput input,
-html[data-theme="dark"] [data-testid="stDateInput"] input {
-    background-color: #262730 !important;
-    color: rgba(250,250,250,0.9) !important;
-}
-
-/* Labels */
-html[data-theme="dark"] label {
-    color: rgba(250,250,250,0.7) !important;
-}
-
-/* Ticket body */
-html[data-theme="dark"] .ticket-body,
-html[data-theme="dark"] .ticket-footer {
-    background: #1e1e2e !important;
-}
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -1047,6 +962,18 @@ st.markdown("""
         const isDark = rgb && (parseInt(rgb[0]) + parseInt(rgb[1]) + parseInt(rgb[2])) < 200;
         const selects = document.querySelectorAll('div[data-baseweb="select"] > div:first-child');
         const menus = document.querySelectorAll('div[data-baseweb="menu"]');
+        // Also fix labels
+        const labels = document.querySelectorAll(
+            '.stSelectbox label, .stSlider label, ' +
+            '[data-testid="stDateInput"] label, .stNumberInput label'
+        );
+        labels.forEach(el => {
+            if (!el.closest('[data-testid="stSidebar"]')) {
+                el.style.setProperty('color', isDark ? '#94a3b8' : '#475569', 'important');
+                el.style.setProperty('-webkit-text-fill-color', isDark ? '#94a3b8' : '#475569', 'important');
+            }
+        });
+
         const values = document.querySelectorAll(
             'div[data-baseweb="select"] [class*="singleValue"], ' +
             'div[data-baseweb="select"] [class*="placeholder"], ' +
