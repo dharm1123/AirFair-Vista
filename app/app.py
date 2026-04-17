@@ -148,18 +148,18 @@ html, body, [class*="css"] {
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   SELECTBOX TEXT FIX — structural selectors only, no class names
-   BaseWeb/Streamlit class names change between versions and cannot
-   be relied upon. We use data attributes + DOM structure instead.
+   SELECTBOX — theme-safe, class-name-independent styling
+   BaseWeb class names (singleValue/placeholder) change across
+   Streamlit versions; we use structural selectors as primary target.
    ══════════════════════════════════════════════════════════════════ */
 
-/* ── LIGHT MODE selectbox box ────────────────────────────────────── */
+/* ── Selectbox outer box ─────────────────────────────────────────── */
 div[data-baseweb="select"] > div:first-child {
     background-color: #ffffff !important;
     border: 1.5px solid #c8d6f0 !important;
     border-radius: 8px !important;
     min-height: 42px !important;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+    transition: border-color 0.15s, box-shadow 0.15s !important;
 }
 div[data-baseweb="select"] > div:first-child:hover,
 div[data-baseweb="select"] > div:first-child:focus-within {
@@ -167,48 +167,45 @@ div[data-baseweb="select"] > div:first-child:focus-within {
     box-shadow: 0 0 0 3px rgba(0,82,204,0.12) !important;
 }
 
-/* ── LIGHT MODE text: structural + class-name fallbacks ──────────── */
-/* Structural: target the value/placeholder container by position     */
+/* ── Selectbox VALUE TEXT — light mode ───────────────────────────── */
+/* Structural (primary): works regardless of BaseWeb version          */
 div[data-baseweb="select"] > div > div > div:first-child,
-/* span inside the value area */
 div[data-baseweb="select"] > div > div > span,
-/* Any direct span child of the inner div */
-div[data-baseweb="select"] span:not([aria-hidden="true"]),
-/* Class-name fallbacks for older Streamlit versions */
-div[data-baseweb="select"] [class*="singleValue"],
-div[data-baseweb="select"] [class*="placeholder"],
-div[data-baseweb="select"] [class*="SingleValue"],
-div[data-baseweb="select"] [class*="Placeholder"] {
+div[data-baseweb="select"] span:not([aria-hidden="true"]) {
     color: #0f172a !important;
     -webkit-text-fill-color: #0f172a !important;
     font-weight: 500 !important;
 }
-/* Input element inside the selectbox */
+/* Class-name fallback for older Streamlit builds */
+div[data-baseweb="select"] [class*="singleValue"],
+div[data-baseweb="select"] [class*="placeholder"],
+div[data-baseweb="select"] [class*="SingleValue"],
+div[data-baseweb="select"] [class*="Placeholder"],
+div[data-baseweb="select"] [class*="Value"] {
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
+    font-weight: 500 !important;
+}
 div[data-baseweb="select"] input {
     color: #0f172a !important;
     -webkit-text-fill-color: #0f172a !important;
     caret-color: #0f172a !important;
 }
-/* Dropdown arrow SVG */
-div[data-baseweb="select"] svg {
-    fill: #64748b !important;
-}
+div[data-baseweb="select"] svg { fill: #64748b !important; }
 
-/* ── LIGHT MODE dropdown menu ────────────────────────────────────── */
+/* ── Dropdown menu — light mode ──────────────────────────────────── */
 div[data-baseweb="menu"] {
     background: #ffffff !important;
     border: 1.5px solid #c8d6f0 !important;
     border-radius: 8px !important;
     box-shadow: 0 8px 24px rgba(0,82,204,0.12) !important;
 }
-div[data-baseweb="menu"] li,
-li[role="option"] {
+div[data-baseweb="menu"] li, li[role="option"] {
     color: #0f172a !important;
     background-color: #ffffff !important;
     font-size: 0.88rem !important;
 }
-div[data-baseweb="menu"] li:hover,
-li[role="option"]:hover {
+div[data-baseweb="menu"] li:hover, li[role="option"]:hover {
     background-color: #e8f0fe !important;
     color: #0052cc !important;
     font-weight: 600 !important;
@@ -220,46 +217,46 @@ li[aria-selected="true"] {
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   DARK MODE — full app dark theme via data-theme="dark" attribute
-   Streamlit sets this on <html> when user picks Dark in the switcher
+   DARK MODE overrides
+   Three detection strategies in order of reliability:
+   1. [data-theme="dark"] on <html>  (Streamlit v1.27+)
+   2. Streamlit's own --background-color CSS variable  (all versions)
+   3. @media prefers-color-scheme: dark  (OS-level fallback)
    ══════════════════════════════════════════════════════════════════ */
 
-/* Override CSS variables for dark mode */
-[data-theme="dark"] {
-    --bg-main:        #0e1117;
-    --bg-card:        #1a1d2e;
-    --bg-sidebar:     #05080f;
-    --text-primary:   rgba(250,250,250,0.90);
-    --text-secondary: #94a3b8;
-    --text-muted:     rgba(250,250,250,0.45);
-    --border:         rgba(250,250,250,0.10);
-    --primary-light:  rgba(0,82,204,0.25);
-    --shadow-sm:      0 1px 3px rgba(0,0,0,0.4);
-    --shadow-md:      0 4px 16px rgba(0,0,0,0.5);
-    --shadow-lg:      0 8px 32px rgba(0,0,0,0.6);
-}
+/* ── Strategy 1 & 2: CSS-variable-based dark selector ───────────── */
+/* Matches when Streamlit sets data-theme OR when --background-color  */
+/* resolves to #0e1117 (Streamlit dark). The JS below also covers     */
+/* all cases with inline-style overrides as the final safety net.     */
 
-/* Dark app background — CRITICAL: overrides the hardcoded #f0f4ff */
+[data-theme="dark"] {
+    --bg-main:       #0e1117;
+    --bg-card:       #1a1d2e;
+    --text-primary:  rgba(250,250,250,0.90);
+    --text-secondary:#94a3b8;
+    --text-muted:    rgba(250,250,250,0.45);
+    --border:        rgba(250,250,250,0.10);
+    --primary-light: rgba(0,82,204,0.25);
+    --shadow-sm:     0 1px 3px rgba(0,0,0,0.4);
+    --shadow-md:     0 4px 16px rgba(0,0,0,0.5);
+    --shadow-lg:     0 8px 32px rgba(0,0,0,0.6);
+}
 [data-theme="dark"] .stApp {
     background: #0e1117 !important;
     background-image:
         radial-gradient(ellipse at 20% 0%, rgba(0,82,204,0.14) 0%, transparent 60%),
         radial-gradient(ellipse at 80% 100%, rgba(245,166,35,0.07) 0%, transparent 60%) !important;
 }
-
-/* Dark global text */
-[data-theme="dark"] html, [data-theme="dark"] body { color: var(--text-primary) !important; }
 [data-theme="dark"] .main .block-container p,
 [data-theme="dark"] .main .block-container span,
 [data-theme="dark"] .main .block-container div,
-[data-theme="dark"] .main .block-container label { color: var(--text-primary); }
+[data-theme="dark"] .main .block-container label { color: rgba(250,250,250,0.90); }
 [data-theme="dark"] .stMarkdown p,
-[data-theme="dark"] .stMarkdown span,
 [data-theme="dark"] .stMarkdown h1,
 [data-theme="dark"] .stMarkdown h2,
-[data-theme="dark"] .stMarkdown h3 { color: var(--text-primary) !important; }
+[data-theme="dark"] .stMarkdown h3 { color: rgba(250,250,250,0.90) !important; }
 
-/* ── DARK selectbox box ──────────────────────────────────────────── */
+/* dark selectbox outer box */
 [data-theme="dark"] div[data-baseweb="select"] > div:first-child {
     background-color: #1e2235 !important;
     border: 1.5px solid rgba(250,250,250,0.18) !important;
@@ -269,27 +266,22 @@ li[aria-selected="true"] {
     border-color: #4d8bff !important;
     box-shadow: 0 0 0 3px rgba(77,139,255,0.18) !important;
 }
-
-/* ── DARK selectbox text — same structural selectors as light mode ── */
+/* dark selectbox text — structural + class-name fallback */
 [data-theme="dark"] div[data-baseweb="select"] > div > div > div:first-child,
 [data-theme="dark"] div[data-baseweb="select"] > div > div > span,
 [data-theme="dark"] div[data-baseweb="select"] span:not([aria-hidden="true"]),
 [data-theme="dark"] div[data-baseweb="select"] [class*="singleValue"],
 [data-theme="dark"] div[data-baseweb="select"] [class*="placeholder"],
 [data-theme="dark"] div[data-baseweb="select"] [class*="SingleValue"],
-[data-theme="dark"] div[data-baseweb="select"] [class*="Placeholder"] {
-    color: rgba(250,250,250,0.90) !important;
-    -webkit-text-fill-color: rgba(250,250,250,0.90) !important;
-    font-weight: 500 !important;
-}
+[data-theme="dark"] div[data-baseweb="select"] [class*="Placeholder"],
+[data-theme="dark"] div[data-baseweb="select"] [class*="Value"],
 [data-theme="dark"] div[data-baseweb="select"] input {
     color: rgba(250,250,250,0.90) !important;
     -webkit-text-fill-color: rgba(250,250,250,0.90) !important;
     caret-color: rgba(250,250,250,0.90) !important;
+    font-weight: 500 !important;
 }
 [data-theme="dark"] div[data-baseweb="select"] svg { fill: rgba(250,250,250,0.55) !important; }
-
-/* ── DARK dropdown menu ──────────────────────────────────────────── */
 [data-theme="dark"] div[data-baseweb="menu"] {
     background: #1e2235 !important;
     border: 1px solid rgba(250,250,250,0.14) !important;
@@ -299,43 +291,21 @@ li[aria-selected="true"] {
 [data-theme="dark"] li[role="option"] {
     color: rgba(250,250,250,0.90) !important;
     background-color: #1e2235 !important;
-    font-size: 0.88rem !important;
 }
 [data-theme="dark"] div[data-baseweb="menu"] li:hover,
-[data-theme="dark"] li[role="option"]:hover {
-    background-color: rgba(77,139,255,0.22) !important;
-    color: #90bcff !important;
-}
-[data-theme="dark"] li[aria-selected="true"] {
-    background-color: rgba(77,139,255,0.30) !important;
-    color: #90bcff !important;
-}
-
-/* ── DARK labels ─────────────────────────────────────────────────── */
+[data-theme="dark"] li[role="option"]:hover { background-color: rgba(77,139,255,0.22) !important; color: #90bcff !important; }
+[data-theme="dark"] li[aria-selected="true"] { background-color: rgba(77,139,255,0.30) !important; color: #90bcff !important; }
 [data-theme="dark"] .stSelectbox label,
+[data-theme="dark"] .stSlider label,
 [data-theme="dark"] [data-testid="stDateInput"] label,
-[data-theme="dark"] .stNumberInput label,
-[data-theme="dark"] .stSlider label { color: rgba(250,250,250,0.55) !important; }
-
-/* ── DARK inputs ─────────────────────────────────────────────────── */
+[data-theme="dark"] .stNumberInput label { color: rgba(250,250,250,0.55) !important; }
 [data-theme="dark"] input, [data-theme="dark"] textarea {
     color: rgba(250,250,250,0.90) !important;
     background-color: #1e2235 !important;
     -webkit-text-fill-color: rgba(250,250,250,0.90) !important;
 }
-[data-theme="dark"] .stNumberInput > div > div > input,
-[data-theme="dark"] [data-testid="stDateInput"] > div > div > input {
-    background: #1e2235 !important;
-    border: 1.5px solid rgba(250,250,250,0.18) !important;
-    color: rgba(250,250,250,0.90) !important;
-    -webkit-text-fill-color: rgba(250,250,250,0.90) !important;
-}
-
-/* ── DARK cards / containers ─────────────────────────────────────── */
-[data-theme="dark"] .form-card,
-[data-theme="dark"] [data-testid="stForm"] { background: #1a1d2e !important; border-color: rgba(250,250,250,0.10) !important; }
+[data-theme="dark"] .form-card, [data-theme="dark"] [data-testid="stForm"] { background: #1a1d2e !important; border-color: rgba(250,250,250,0.10) !important; }
 [data-theme="dark"] .ticket-body { background: #1a1d2e !important; }
-[data-theme="dark"] .ticket-footer { background: #141726 !important; border-color: rgba(250,250,250,0.10) !important; }
 [data-theme="dark"] [data-testid="stMetric"] { background: #1a1d2e !important; border-color: rgba(250,250,250,0.10) !important; }
 [data-theme="dark"] [data-testid="stExpander"] { background: #1a1d2e !important; border-color: rgba(250,250,250,0.10) !important; }
 [data-theme="dark"] hr { border-color: rgba(250,250,250,0.10) !important; }
@@ -343,18 +313,19 @@ li[aria-selected="true"] {
 [data-theme="dark"] .valid-badge { background: rgba(34,197,94,0.15) !important; border-color: rgba(34,197,94,0.35) !important; color: #4ade80 !important; }
 [data-theme="dark"] .stRadio label, [data-theme="dark"] .stCheckbox label { color: rgba(250,250,250,0.70) !important; }
 
-/* ── OS-level dark fallback (@media) ─────────────────────────────── */
+/* ── Strategy 3: OS-level dark media query ───────────────────────── */
 @media (prefers-color-scheme: dark) {
     div[data-baseweb="select"] > div:first-child { background-color: #1e2235 !important; border: 1.5px solid rgba(250,250,250,0.18) !important; }
     div[data-baseweb="select"] > div > div > div:first-child,
     div[data-baseweb="select"] > div > div > span,
     div[data-baseweb="select"] span:not([aria-hidden="true"]),
     div[data-baseweb="select"] [class*="singleValue"],
-    div[data-baseweb="select"] [class*="placeholder"] {
+    div[data-baseweb="select"] [class*="placeholder"],
+    div[data-baseweb="select"] [class*="Value"],
+    div[data-baseweb="select"] input {
         color: rgba(250,250,250,0.90) !important;
         -webkit-text-fill-color: rgba(250,250,250,0.90) !important;
     }
-    div[data-baseweb="select"] input { color: rgba(250,250,250,0.90) !important; -webkit-text-fill-color: rgba(250,250,250,0.90) !important; }
     div[data-baseweb="select"] svg { fill: rgba(250,250,250,0.5) !important; }
     div[data-baseweb="menu"] { background: #1e2235 !important; border: 1px solid rgba(250,250,250,0.14) !important; }
     div[data-baseweb="menu"] li, li[role="option"] { color: rgba(250,250,250,0.90) !important; background-color: #1e2235 !important; }
@@ -383,9 +354,6 @@ li[aria-selected="true"] {
     background-color: rgba(255,255,255,0.10) !important;
     border: 1px solid rgba(255,255,255,0.20) !important;
 }
-[data-testid="stSidebar"] div[data-baseweb="select"] > div > div > div:first-child,
-[data-testid="stSidebar"] div[data-baseweb="select"] > div > div > span,
-[data-testid="stSidebar"] div[data-baseweb="select"] span:not([aria-hidden="true"]),
 [data-testid="stSidebar"] div[data-baseweb="select"] [class*="singleValue"],
 [data-testid="stSidebar"] div[data-baseweb="select"] [class*="placeholder"],
 [data-testid="stSidebar"] div[data-baseweb="select"] input {
@@ -1066,125 +1034,173 @@ div[data-baseweb="menu"] li:hover {
 
 
 
-# ── JavaScript: detect Streamlit theme and apply dynamic CSS ─────────────────
-# This JS snippet runs in the browser and adds a 'dark-mode' class to body
-# when Streamlit is in dark mode, enabling the CSS :is(body.dark-mode) selectors
+# ── JavaScript: bulletproof theme detection + selectbox text fix ────────────
 st.markdown("""
 <script>
 (function() {
-    function applyTheme() {
-        // ── Step 1: detect theme reliably ────────────────────────────
-        // Streamlit sets data-theme="dark" on <html> for manual dark mode
-        const htmlTheme = document.documentElement.getAttribute('data-theme');
-        let isDark = (htmlTheme === 'dark');
 
-        if (!isDark) {
-            // Fall back to checking the actual app container
-            // NEVER use document.body — it is often rgba(0,0,0,0) which is
-            // transparent and gives sum=0 → false dark detection (the original bug)
-            const appEl = document.querySelector('[data-testid="stAppViewContainer"]')
-                        || document.querySelector('.stApp');
-            if (appEl) {
-                const bg  = window.getComputedStyle(appEl).backgroundColor;
-                const rgb = bg.match(/\\d+/g);
-                if (rgb && rgb.length >= 3) {
-                    const alpha = rgb.length >= 4 ? parseFloat(rgb[3]) : 1;
-                    const sum   = parseInt(rgb[0]) + parseInt(rgb[1]) + parseInt(rgb[2]);
-                    // Only dark when alpha>0, sum>0 (not transparent) and luminance low
-                    isDark = (alpha > 0) && (sum > 0) && (sum < 200);
-                }
-            }
+    /* ── Theme detection: 3-method cascade ──────────────────────────────────
+       Method 1: data-theme attribute on <html>  (Streamlit >= 1.27)
+       Method 2: Streamlit's --background-color CSS variable  (all versions)
+       Method 3: Computed bg of app container  (last resort)
+    ─────────────────────────────────────────────────────────────────────── */
+    function getIsDark() {
+        // Method 1
+        const attr = document.documentElement.getAttribute('data-theme');
+        if (attr === 'dark')  return true;
+        if (attr === 'light') return false;
+
+        // Method 2 — Streamlit sets --background-color on :root in ALL versions
+        const stBg = getComputedStyle(document.documentElement)
+                        .getPropertyValue('--background-color').trim();
+        if (stBg && stBg !== 'transparent' && stBg !== '') {
+            return colorIsDark(stBg);
         }
 
-        // ── Step 2: style labels ──────────────────────────────────────
-        const labels = document.querySelectorAll(
+        // Method 3 — actual rendered background of the app container
+        const appEl = document.querySelector('[data-testid="stAppViewContainer"]')
+                   || document.querySelector('.stApp');
+        if (appEl) {
+            const bg = getComputedStyle(appEl).backgroundColor;
+            // Skip transparent (rgba(0,0,0,0)) — that is NOT dark!
+            if (!bg.includes('rgba(0, 0, 0, 0)') && bg !== 'transparent') {
+                return colorIsDark(bg);
+            }
+        }
+        return false; // default: light
+    }
+
+    function colorIsDark(cssColor) {
+        // Handle hex
+        const hex = cssColor.match(/^#([0-9a-f]{3,8})/i);
+        if (hex) {
+            const h = hex[1];
+            const full = h.length === 3
+                ? h.split('').map(c => c+c).join('')
+                : h.slice(0, 6);
+            const r = parseInt(full.slice(0,2),16);
+            const g = parseInt(full.slice(2,4),16);
+            const b = parseInt(full.slice(4,6),16);
+            return !isNaN(r+g+b) && (r+g+b) < 200;
+        }
+        // Handle rgb / rgba
+        const parts = cssColor.match(/[\\d.]+/g);
+        if (parts && parts.length >= 3) {
+            const alpha = parts.length >= 4 ? parseFloat(parts[3]) : 1;
+            const sum   = parseInt(parts[0]) + parseInt(parts[1]) + parseInt(parts[2]);
+            return alpha > 0 && sum > 0 && sum < 200;
+        }
+        return false;
+    }
+
+    /* ── Apply styles to every selectbox on the page ────────────────────── */
+    function applyTheme() {
+        const isDark = getIsDark();
+
+        const LIGHT = {
+            text:       '#0f172a',
+            boxBg:      '#ffffff',
+            boxBorder:  '1.5px solid #c8d6f0',
+            menuBg:     '#ffffff',
+            optionBg:   '#ffffff',
+            optionText: '#0f172a',
+            label:      '#475569',
+            svgFill:    '#64748b'
+        };
+        const DARK = {
+            text:       'rgba(250,250,250,0.90)',
+            boxBg:      '#1e2235',
+            boxBorder:  '1.5px solid rgba(250,250,250,0.18)',
+            menuBg:     '#1e2235',
+            optionBg:   '#1e2235',
+            optionText: 'rgba(250,250,250,0.90)',
+            label:      '#94a3b8',
+            svgFill:    'rgba(250,250,250,0.55)'
+        };
+        const T = isDark ? DARK : LIGHT;
+
+        /* Labels */
+        document.querySelectorAll(
             '.stSelectbox label, .stSlider label, ' +
             '[data-testid="stDateInput"] label, .stNumberInput label'
-        );
-        labels.forEach(el => {
-            if (!el.closest('[data-testid="stSidebar"]')) {
-                const c = isDark ? '#94a3b8' : '#475569';
-                el.style.setProperty('color', c, 'important');
-                el.style.setProperty('-webkit-text-fill-color', c, 'important');
+        ).forEach(el => {
+            if (el.closest('[data-testid="stSidebar"]')) return;
+            el.style.setProperty('color', T.label, 'important');
+            el.style.setProperty('-webkit-text-fill-color', T.label, 'important');
+        });
+
+        /* Selectbox outer box */
+        document.querySelectorAll('div[data-baseweb="select"] > div:first-child').forEach(el => {
+            if (el.closest('[data-testid="stSidebar"]')) return;
+            el.style.setProperty('background-color', T.boxBg, 'important');
+            el.style.setProperty('border', T.boxBorder, 'important');
+        });
+
+        /* ── Selectbox VALUE / PLACEHOLDER text ─────────────────────────
+           We collect every possible matching node into a Set (dedup), then
+           style them all. This covers every BaseWeb / Streamlit version.  */
+        const textNodes = new Set();
+        const SELECTORS = [
+            /* Structural — primary approach */
+            'div[data-baseweb="select"] > div > div > div:first-child',
+            'div[data-baseweb="select"] > div > div > span',
+            'div[data-baseweb="select"] span:not([aria-hidden="true"])',
+            /* Class-name fallbacks */
+            'div[data-baseweb="select"] [class*="singleValue"]',
+            'div[data-baseweb="select"] [class*="SingleValue"]',
+            'div[data-baseweb="select"] [class*="placeholder"]',
+            'div[data-baseweb="select"] [class*="Placeholder"]',
+            'div[data-baseweb="select"] [class*="Value"]',
+            /* Hidden input */
+            'div[data-baseweb="select"] input'
+        ];
+        SELECTORS.forEach(sel => {
+            try { document.querySelectorAll(sel).forEach(el => textNodes.add(el)); }
+            catch(e) {}
+        });
+
+        textNodes.forEach(el => {
+            if (el.closest('[data-testid="stSidebar"]')) return;
+            el.style.setProperty('color', T.text, 'important');
+            el.style.setProperty('-webkit-text-fill-color', T.text, 'important');
+            if (el.tagName === 'INPUT') {
+                el.style.setProperty('caret-color', T.text, 'important');
             }
         });
 
-        // ── Step 3: style selectbox containers ───────────────────────
-        const selects = document.querySelectorAll(
-            'div[data-baseweb="select"] > div:first-child'
-        );
-        const menus = document.querySelectorAll('div[data-baseweb="menu"]');
+        /* SVG arrows */
+        document.querySelectorAll('div[data-baseweb="select"] svg').forEach(el => {
+            if (el.closest('[data-testid="stSidebar"]')) return;
+            el.style.setProperty('fill', T.svgFill, 'important');
+        });
 
-        // ── Step 4: style selectbox VALUE TEXT ───────────────────────
-        // Use STRUCTURAL selectors — class names (singleValue/placeholder)
-        // changed in newer BaseWeb/Streamlit and can no longer be relied on
-        const valueSelectors = [
-            // Structural: value/placeholder div is first-child of inner div
-            'div[data-baseweb="select"] > div > div > div:first-child',
-            // Spans inside the value area (BaseWeb wraps text in spans)
-            'div[data-baseweb="select"] > div > div > span',
-            // Any non-hidden span within the select
-            'div[data-baseweb="select"] span:not([aria-hidden="true"])',
-            // Class-name fallbacks for older versions
-            'div[data-baseweb="select"] [class*="singleValue"]',
-            'div[data-baseweb="select"] [class*="placeholder"]',
-            'div[data-baseweb="select"] [class*="SingleValue"]',
-            'div[data-baseweb="select"] [class*="Placeholder"]',
-            // Hidden input
-            'div[data-baseweb="select"] input'
-        ].join(', ');
+        /* Dropdown menu */
+        document.querySelectorAll('div[data-baseweb="menu"]').forEach(el => {
+            el.style.setProperty('background', T.menuBg, 'important');
+        });
 
-        const values = document.querySelectorAll(valueSelectors);
-
-        if (isDark) {
-            selects.forEach(el => {
-                if (!el.closest('[data-testid="stSidebar"]')) {
-                    el.style.setProperty('background-color', '#1e2235', 'important');
-                    el.style.setProperty('border', '1.5px solid rgba(250,250,250,0.18)', 'important');
-                }
-            });
-            menus.forEach(el => {
-                el.style.setProperty('background', '#1e2235', 'important');
-                el.style.setProperty('border', '1px solid rgba(250,250,250,0.14)', 'important');
-            });
-            values.forEach(el => {
-                if (!el.closest('[data-testid="stSidebar"]')) {
-                    el.style.setProperty('color', 'rgba(250,250,250,0.90)', 'important');
-                    el.style.setProperty('-webkit-text-fill-color', 'rgba(250,250,250,0.90)', 'important');
-                }
-            });
-            document.querySelectorAll('li[role="option"]').forEach(el => {
-                el.style.setProperty('color', 'rgba(250,250,250,0.90)', 'important');
-                el.style.setProperty('background-color', '#1e2235', 'important');
-            });
-        } else {
-            selects.forEach(el => {
-                if (!el.closest('[data-testid="stSidebar"]')) {
-                    el.style.setProperty('background-color', '#ffffff', 'important');
-                    el.style.setProperty('border', '1.5px solid #c8d6f0', 'important');
-                }
-            });
-            values.forEach(el => {
-                if (!el.closest('[data-testid="stSidebar"]')) {
-                    el.style.setProperty('color', '#0f172a', 'important');
-                    el.style.setProperty('-webkit-text-fill-color', '#0f172a', 'important');
-                }
-            });
-            menus.forEach(el => {
-                el.style.setProperty('background', '#ffffff', 'important');
-            });
-            document.querySelectorAll('li[role="option"]').forEach(el => {
-                el.style.setProperty('color', '#0f172a', 'important');
-                el.style.setProperty('background-color', '#ffffff', 'important');
-            });
-        }
+        /* Dropdown options */
+        document.querySelectorAll('li[role="option"]').forEach(el => {
+            el.style.setProperty('color', T.optionText, 'important');
+            el.style.setProperty('background-color', T.optionBg, 'important');
+        });
     }
 
-    // Run immediately and on every DOM change (Streamlit re-renders widgets)
-    applyTheme();
-    const observer = new MutationObserver(applyTheme);
-    observer.observe(document.body, { childList: true, subtree: true });
+    /* ── Run strategy ────────────────────────────────────────────────────── */
+    applyTheme();                               // immediate
+
+    // Re-run after short delays to catch late React renders
+    setTimeout(applyTheme, 200);
+    setTimeout(applyTheme, 800);
+    setTimeout(applyTheme, 2000);
+
+    // Re-run on every DOM change (Streamlit re-renders on every interaction)
+    new MutationObserver(applyTheme)
+        .observe(document.body, { childList: true, subtree: true });
+
+    // Re-run on Streamlit postMessage (theme toggle sends a message)
     window.addEventListener('message', applyTheme);
+
 })();
 </script>
 """, unsafe_allow_html=True)
