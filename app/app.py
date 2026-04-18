@@ -1,6 +1,5 @@
 import streamlit as st
 
-# ── MUST be the very first Streamlit call ─────────────────────────────────────
 st.set_page_config(
     page_title='AirFair Vista',
     page_icon='✈️',
@@ -16,21 +15,8 @@ import sys
 import plotly.graph_objects as go
 import plotly.express as px
 
-# ── Import preprocessing pipeline ────────────────────────────────────────────
-import sys
-import os
-
-# ── Bulletproof path resolution for Streamlit Cloud + local dev ──────────────
-# Handles all folder structures:
-#   app/app.py + app/preprocessor.py       (preprocessor in same folder)
-#   app/app.py + backend/preprocessor.py   (preprocessor in sibling folder)
-#   app/app.py + preprocessor.py           (preprocessor at repo root)
-_APP_DIR   = os.path.dirname(os.path.abspath(__file__))
-_REPO_ROOT = os.path.dirname(_APP_DIR)
-for _p in [_APP_DIR, _REPO_ROOT, os.path.join(_REPO_ROOT, "backend"),
-           os.path.join(_APP_DIR, "backend")]:
-    if _p not in sys.path:
-        sys.path.insert(0, _p)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.join(BASE_DIR, "backend"))
 
 from preprocessor import (
     AIRLINES, SOURCES, DESTINATIONS, STOPS, MONTHS, WEEKDAYS,
@@ -45,7 +31,6 @@ from preprocessor import (
     get_validation_errors, build_features, build_feature_matrix,
 )
 
-# ── Model loading (cached singleton) ─────────────────────────────────────────
 @st.cache_resource(show_spinner='Loading model...')
 def load_model():
     if os.path.exists(MODEL_PATH):
@@ -61,298 +46,293 @@ def predict_price(airline, source, destination, stops,
                   journey_day, duration_hours, passengers):
     if MODEL_LOADED:
         try:
-            X   = build_features(airline, source, destination,
-                                  dep_hour, journey_month, journey_weekday,
-                                  journey_day, duration_hours)
+            X = build_features(airline, source, destination,
+                               dep_hour, journey_month, journey_weekday,
+                               journey_day, duration_hours)
             raw = model.predict(X)[0]
             if raw < 15:
                 raw = np.expm1(raw)
             return round(float(raw) * passengers, 2)
         except Exception as e:
-            st.warning(f'⚠️ Model error: {e}  →  fallback estimator.')
+            st.warning(f'Model error: {e} → fallback estimator.')
     base = (
-        AIRLINE_MEAN.get(airline, PRICE_AVG)              * 0.30 +
-        STOPS_MEAN.get(stops, PRICE_AVG)                  * 0.25 +
-        ROUTE_MEAN.get((source, destination), PRICE_AVG)  * 0.20 +
-        HOUR_MEAN.get(dep_hour, PRICE_AVG)                * 0.10 +
-        MONTH_MEAN.get(journey_month, PRICE_AVG)          * 0.10 +
-        WEEKDAY_MEAN.get(journey_weekday, PRICE_AVG)      * 0.05
+        AIRLINE_MEAN.get(airline, PRICE_AVG) * 0.30 +
+        STOPS_MEAN.get(stops, PRICE_AVG) * 0.25 +
+        ROUTE_MEAN.get((source, destination), PRICE_AVG) * 0.20 +
+        HOUR_MEAN.get(dep_hour, PRICE_AVG) * 0.10 +
+        MONTH_MEAN.get(journey_month, PRICE_AVG) * 0.10 +
+        WEEKDAY_MEAN.get(journey_weekday, PRICE_AVG) * 0.05
     )
-    return round(base * (1 + max(0, duration_hours-2)*0.04) * passengers, 2)
+    return round(base * (1 + max(0, duration_hours - 2) * 0.04) * passengers, 2)
 
 
 def batch_predict_app(combos: list, passengers: int = 1) -> list:
     from preprocessor import batch_predict
-    return batch_predict(
-        model if MODEL_LOADED else None,
-        combos, passengers
-    )
+    return batch_predict(model if MODEL_LOADED else None, combos, passengers)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  MASTER CSS  (single block, no duplicates)
+#  MASTER CSS  — theme-aware, works in both Light and Dark mode
 # ─────────────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-/* ── FONTS ──────────────────────────────────────────────────────── */
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Syne:wght@700;800;900&display=swap');
 
-/* ── CSS VARIABLES ──────────────────────────────────────────────── */
+/* ── CSS VARIABLES ─────────────────────────────────────────────── */
 :root {
-    --primary:       #0052cc;
-    --primary-dark:  #003a99;
+    --primary: #0052cc;
+    --primary-dark: #003a99;
     --primary-light: #e8f0fe;
-    --accent:        #f5a623;
-    --accent-light:  rgba(245,166,35,0.15);
-    --success:       #22c55e;
-    --danger:        #ef4444;
-    --warning:       #f59e0b;
-    --bg-main:       #f0f4ff;
-    --bg-card:       #ffffff;
-    --bg-sidebar:    #09122c;
-    --text-primary:  #0f172a;
-    --text-secondary:#64748b;
-    --text-muted:    #94a3b8;
-    --border:        #e2e8f0;
-    --border-focus:  #0052cc;
-    --shadow-sm:     0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-    --shadow-md:     0 4px 16px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.05);
-    --shadow-lg:     0 8px 32px rgba(0,0,0,0.10), 0 4px 12px rgba(0,0,0,0.06);
-    --radius-sm:     8px;
-    --radius-md:     12px;
-    --radius-lg:     18px;
-    --radius-xl:     24px;
+    --accent: #f5a623;
+    --success: #22c55e;
+    --danger: #ef4444;
+    --bg-main: #f0f4ff;
+    --bg-card: #ffffff;
+    --bg-sidebar: #09122c;
+    --text-primary: #0f172a;
+    --text-secondary: #64748b;
+    --text-muted: #94a3b8;
+    --border: #e2e8f0;
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.10);
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 18px;
+    --radius-xl: 24px;
 }
 
 /* ── GLOBAL ─────────────────────────────────────────────────────── */
 html, body, [class*="css"] {
     font-family: 'Plus Jakarta Sans', sans-serif !important;
-    font-feature-settings: 'cv02','cv03','cv04','cv11';
-    color: var(--text-primary);
 }
-.stApp {
-    background: var(--bg-main);
-    background-image:
-        radial-gradient(ellipse at 20% 0%, rgba(0,82,204,0.06) 0%, transparent 60%),
-        radial-gradient(ellipse at 80% 100%, rgba(245,166,35,0.04) 0%, transparent 60%);
-}
-* { box-sizing: border-box; }
-
-/* ── MAIN AREA TEXT ─────────────────────────────────────────────── */
-/* Ensure all main content text is dark */
-.main .block-container p,
-.main .block-container span,
-.main .block-container div,
-.main .block-container label {
-    color: var(--text-primary);
-}
+.stApp { background: var(--bg-main); }
 
 /* ══════════════════════════════════════════════════════════════════
-   SELECTBOX — theme-safe, class-name-independent styling
-   BaseWeb class names (singleValue/placeholder) change across
-   Streamlit versions; we use structural selectors as primary target.
+   SELECTBOX — COMPLETE THEME-AWARE FIX
+   Strategy: Light mode = white bg + dark text
+             Dark mode  = use Streamlit's own dark variables
    ══════════════════════════════════════════════════════════════════ */
 
-/* ── Selectbox outer box ─────────────────────────────────────────── */
-div[data-baseweb="select"] > div:first-child {
+/* LIGHT MODE: force clean white box with visible dark text */
+[data-testid="stAppViewContainer"] div[data-baseweb="select"] > div:first-child {
     background-color: #ffffff !important;
     border: 1.5px solid #c8d6f0 !important;
     border-radius: 8px !important;
     min-height: 42px !important;
-    transition: border-color 0.15s, box-shadow 0.15s !important;
 }
-div[data-baseweb="select"] > div:first-child:hover,
-div[data-baseweb="select"] > div:first-child:focus-within {
+[data-testid="stAppViewContainer"] div[data-baseweb="select"] > div:first-child:hover {
     border-color: #0052cc !important;
     box-shadow: 0 0 0 3px rgba(0,82,204,0.12) !important;
 }
+/* Force visible text - the critical -webkit-text-fill-color override */
+[data-testid="stAppViewContainer"] div[data-baseweb="select"] [class*="singleValue"],
+[data-testid="stAppViewContainer"] div[data-baseweb="select"] [class*="placeholder"] {
+    color: #111827 !important;
+    -webkit-text-fill-color: #111827 !important;
+}
+[data-testid="stAppViewContainer"] div[data-baseweb="select"] input {
+    color: #111827 !important;
+    -webkit-text-fill-color: #111827 !important;
+    caret-color: #0052cc !important;
+}
+[data-testid="stAppViewContainer"] div[data-baseweb="select"] svg { fill: #64748b !important; }
 
-/* ── Selectbox VALUE TEXT — light mode ───────────────────────────── */
-/* Structural (primary): works regardless of BaseWeb version          */
-div[data-baseweb="select"] > div > div > div:first-child,
-div[data-baseweb="select"] > div > div > span,
-div[data-baseweb="select"] span:not([aria-hidden="true"]) {
-    color: #0f172a !important;
-    -webkit-text-fill-color: #0f172a !important;
-    font-weight: 500 !important;
-}
-/* Class-name fallback for older Streamlit builds */
-div[data-baseweb="select"] [class*="singleValue"],
-div[data-baseweb="select"] [class*="placeholder"],
-div[data-baseweb="select"] [class*="SingleValue"],
-div[data-baseweb="select"] [class*="Placeholder"],
-div[data-baseweb="select"] [class*="Value"] {
-    color: #0f172a !important;
-    -webkit-text-fill-color: #0f172a !important;
-    font-weight: 500 !important;
-}
-div[data-baseweb="select"] input {
-    color: #0f172a !important;
-    -webkit-text-fill-color: #0f172a !important;
-    caret-color: #0f172a !important;
-}
-div[data-baseweb="select"] svg { fill: #64748b !important; }
-
-/* ── Dropdown menu — light mode ──────────────────────────────────── */
-div[data-baseweb="menu"] {
+/* Dropdown open list — light */
+[data-testid="stAppViewContainer"] div[data-baseweb="menu"] {
     background: #ffffff !important;
     border: 1.5px solid #c8d6f0 !important;
     border-radius: 8px !important;
-    box-shadow: 0 8px 24px rgba(0,82,204,0.12) !important;
+    box-shadow: 0 8px 24px rgba(0,82,204,0.14) !important;
 }
-div[data-baseweb="menu"] li, li[role="option"] {
-    color: #0f172a !important;
-    background-color: #ffffff !important;
+[data-testid="stAppViewContainer"] li[role="option"],
+[data-testid="stAppViewContainer"] div[data-baseweb="menu"] li {
+    color: #111827 !important;
+    background: #ffffff !important;
+    -webkit-text-fill-color: #111827 !important;
     font-size: 0.88rem !important;
 }
-div[data-baseweb="menu"] li:hover, li[role="option"]:hover {
-    background-color: #e8f0fe !important;
+[data-testid="stAppViewContainer"] li[role="option"]:hover {
+    background: #e8f0fe !important;
     color: #0052cc !important;
+    -webkit-text-fill-color: #0052cc !important;
+}
+[data-testid="stAppViewContainer"] li[aria-selected="true"] {
+    background: #dce9ff !important;
+    color: #0052cc !important;
+    -webkit-text-fill-color: #0052cc !important;
     font-weight: 600 !important;
 }
-li[aria-selected="true"] {
-    background-color: #dce9ff !important;
-    color: #0052cc !important;
-    font-weight: 600 !important;
-}
 
-/* ══════════════════════════════════════════════════════════════════
-   DARK MODE overrides
-   Three detection strategies in order of reliability:
-   1. [data-theme="dark"] on <html>  (Streamlit v1.27+)
-   2. Streamlit's own --background-color CSS variable  (all versions)
-   3. @media prefers-color-scheme: dark  (OS-level fallback)
-   ══════════════════════════════════════════════════════════════════ */
-
-/* ── Strategy 1 & 2: CSS-variable-based dark selector ───────────── */
-/* Matches when Streamlit sets data-theme OR when --background-color  */
-/* resolves to #0e1117 (Streamlit dark). The JS below also covers     */
-/* all cases with inline-style overrides as the final safety net.     */
-
-[data-theme="dark"] {
-    --bg-main:       #0e1117;
-    --bg-card:       #1a1d2e;
-    --text-primary:  rgba(250,250,250,0.90);
-    --text-secondary:#94a3b8;
-    --text-muted:    rgba(250,250,250,0.45);
-    --border:        rgba(250,250,250,0.10);
-    --primary-light: rgba(0,82,204,0.25);
-    --shadow-sm:     0 1px 3px rgba(0,0,0,0.4);
-    --shadow-md:     0 4px 16px rgba(0,0,0,0.5);
-    --shadow-lg:     0 8px 32px rgba(0,0,0,0.6);
-}
-[data-theme="dark"] .stApp {
-    background: #0e1117 !important;
-    background-image:
-        radial-gradient(ellipse at 20% 0%, rgba(0,82,204,0.14) 0%, transparent 60%),
-        radial-gradient(ellipse at 80% 100%, rgba(245,166,35,0.07) 0%, transparent 60%) !important;
-}
-[data-theme="dark"] .main .block-container p,
-[data-theme="dark"] .main .block-container span,
-[data-theme="dark"] .main .block-container div,
-[data-theme="dark"] .main .block-container label { color: rgba(250,250,250,0.90); }
-[data-theme="dark"] .stMarkdown p,
-[data-theme="dark"] .stMarkdown h1,
-[data-theme="dark"] .stMarkdown h2,
-[data-theme="dark"] .stMarkdown h3 { color: rgba(250,250,250,0.90) !important; }
-
-/* dark selectbox outer box */
-[data-theme="dark"] div[data-baseweb="select"] > div:first-child {
-    background-color: #1e2235 !important;
-    border: 1.5px solid rgba(250,250,250,0.18) !important;
-}
-[data-theme="dark"] div[data-baseweb="select"] > div:first-child:hover,
-[data-theme="dark"] div[data-baseweb="select"] > div:first-child:focus-within {
-    border-color: #4d8bff !important;
-    box-shadow: 0 0 0 3px rgba(77,139,255,0.18) !important;
-}
-/* dark selectbox text — structural + class-name fallback */
-[data-theme="dark"] div[data-baseweb="select"] > div > div > div:first-child,
-[data-theme="dark"] div[data-baseweb="select"] > div > div > span,
-[data-theme="dark"] div[data-baseweb="select"] span:not([aria-hidden="true"]),
-[data-theme="dark"] div[data-baseweb="select"] [class*="singleValue"],
-[data-theme="dark"] div[data-baseweb="select"] [class*="placeholder"],
-[data-theme="dark"] div[data-baseweb="select"] [class*="SingleValue"],
-[data-theme="dark"] div[data-baseweb="select"] [class*="Placeholder"],
-[data-theme="dark"] div[data-baseweb="select"] [class*="Value"],
-[data-theme="dark"] div[data-baseweb="select"] input {
-    color: rgba(250,250,250,0.90) !important;
-    -webkit-text-fill-color: rgba(250,250,250,0.90) !important;
-    caret-color: rgba(250,250,250,0.90) !important;
-    font-weight: 500 !important;
-}
-[data-theme="dark"] div[data-baseweb="select"] svg { fill: rgba(250,250,250,0.55) !important; }
-[data-theme="dark"] div[data-baseweb="menu"] {
-    background: #1e2235 !important;
-    border: 1px solid rgba(250,250,250,0.14) !important;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.5) !important;
-}
-[data-theme="dark"] div[data-baseweb="menu"] li,
-[data-theme="dark"] li[role="option"] {
-    color: rgba(250,250,250,0.90) !important;
-    background-color: #1e2235 !important;
-}
-[data-theme="dark"] div[data-baseweb="menu"] li:hover,
-[data-theme="dark"] li[role="option"]:hover { background-color: rgba(77,139,255,0.22) !important; color: #90bcff !important; }
-[data-theme="dark"] li[aria-selected="true"] { background-color: rgba(77,139,255,0.30) !important; color: #90bcff !important; }
-[data-theme="dark"] .stSelectbox label,
-[data-theme="dark"] .stSlider label,
-[data-theme="dark"] [data-testid="stDateInput"] label,
-[data-theme="dark"] .stNumberInput label { color: rgba(250,250,250,0.55) !important; }
-[data-theme="dark"] input, [data-theme="dark"] textarea {
-    color: rgba(250,250,250,0.90) !important;
-    background-color: #1e2235 !important;
-    -webkit-text-fill-color: rgba(250,250,250,0.90) !important;
-}
-[data-theme="dark"] .form-card, [data-theme="dark"] [data-testid="stForm"] { background: #1a1d2e !important; border-color: rgba(250,250,250,0.10) !important; }
-[data-theme="dark"] .ticket-body { background: #1a1d2e !important; }
-[data-theme="dark"] [data-testid="stMetric"] { background: #1a1d2e !important; border-color: rgba(250,250,250,0.10) !important; }
-[data-theme="dark"] [data-testid="stExpander"] { background: #1a1d2e !important; border-color: rgba(250,250,250,0.10) !important; }
-[data-theme="dark"] hr { border-color: rgba(250,250,250,0.10) !important; }
-[data-theme="dark"] .duration-chip { background: rgba(0,82,204,0.20) !important; border-color: rgba(77,139,255,0.30) !important; color: #90bcff !important; }
-[data-theme="dark"] .valid-badge { background: rgba(34,197,94,0.15) !important; border-color: rgba(34,197,94,0.35) !important; color: #4ade80 !important; }
-[data-theme="dark"] .stRadio label, [data-theme="dark"] .stCheckbox label { color: rgba(250,250,250,0.70) !important; }
-
-/* ── Strategy 3: OS-level dark media query ───────────────────────── */
-@media (prefers-color-scheme: dark) {
-    div[data-baseweb="select"] > div:first-child { background-color: #1e2235 !important; border: 1.5px solid rgba(250,250,250,0.18) !important; }
-    div[data-baseweb="select"] > div > div > div:first-child,
-    div[data-baseweb="select"] > div > div > span,
-    div[data-baseweb="select"] span:not([aria-hidden="true"]),
-    div[data-baseweb="select"] [class*="singleValue"],
-    div[data-baseweb="select"] [class*="placeholder"],
-    div[data-baseweb="select"] [class*="Value"],
-    div[data-baseweb="select"] input {
-        color: rgba(250,250,250,0.90) !important;
-        -webkit-text-fill-color: rgba(250,250,250,0.90) !important;
-    }
-    div[data-baseweb="select"] svg { fill: rgba(250,250,250,0.5) !important; }
-    div[data-baseweb="menu"] { background: #1e2235 !important; border: 1px solid rgba(250,250,250,0.14) !important; }
-    div[data-baseweb="menu"] li, li[role="option"] { color: rgba(250,250,250,0.90) !important; background-color: #1e2235 !important; }
-    div[data-baseweb="menu"] li:hover, li[role="option"]:hover { background-color: rgba(77,139,255,0.22) !important; color: #90bcff !important; }
-}
-
-/* ── LABELS ──────────────────────────────────────────────────── */
-.stSelectbox label {
+/* ── LABELS — LIGHT MODE: visible medium grey ───────────────────── */
+[data-testid="stAppViewContainer"] .stSelectbox label {
     font-size: 0.78rem !important;
     font-weight: 700 !important;
+    color: #374151 !important;
+    -webkit-text-fill-color: #374151 !important;
     text-transform: uppercase !important;
     letter-spacing: 0.8px !important;
     margin-bottom: 4px !important;
-    /* LIGHT MODE: medium-contrast grey visible on white */
-    color: #475569 !important;
 }
-/* DARK MODE: bright enough to contrast against #0e1117 dark bg */
+[data-testid="stAppViewContainer"] .stSlider label {
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+    color: #374151 !important;
+    -webkit-text-fill-color: #374151 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+}
+[data-testid="stAppViewContainer"] [data-testid="stDateInput"] label {
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+    color: #374151 !important;
+    -webkit-text-fill-color: #374151 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+}
+[data-testid="stAppViewContainer"] .stNumberInput label {
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+    color: #374151 !important;
+    -webkit-text-fill-color: #374151 !important;
+}
+
+/* ── INPUTS ─────────────────────────────────────────────────────── */
+[data-testid="stAppViewContainer"] [data-testid="stDateInput"] input,
+[data-testid="stAppViewContainer"] .stNumberInput input {
+    background: #ffffff !important;
+    border: 1.5px solid #c8d6f0 !important;
+    border-radius: 8px !important;
+    color: #111827 !important;
+    -webkit-text-fill-color: #111827 !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   DARK MODE OVERRIDES
+   Streamlit dark mode: --default-backgroundColor = #0e1117
+   We detect it via the .st-dark class on the root element
+   ══════════════════════════════════════════════════════════════════ */
+
+/* Method 1: Streamlit adds st-dark class to html in dark mode */
+.st-dark [data-testid="stAppViewContainer"] div[data-baseweb="select"] > div:first-child,
+[data-theme="dark"] div[data-baseweb="select"] > div:first-child {
+    background-color: #1e2130 !important;
+    border: 1.5px solid rgba(255,255,255,0.18) !important;
+}
+.st-dark [data-testid="stAppViewContainer"] div[data-baseweb="select"] [class*="singleValue"],
+.st-dark [data-testid="stAppViewContainer"] div[data-baseweb="select"] [class*="placeholder"],
+[data-theme="dark"] div[data-baseweb="select"] [class*="singleValue"],
+[data-theme="dark"] div[data-baseweb="select"] [class*="placeholder"] {
+    color: #e2e8f0 !important;
+    -webkit-text-fill-color: #e2e8f0 !important;
+}
+.st-dark [data-testid="stAppViewContainer"] div[data-baseweb="select"] input,
+[data-theme="dark"] div[data-baseweb="select"] input {
+    color: #e2e8f0 !important;
+    -webkit-text-fill-color: #e2e8f0 !important;
+}
+.st-dark [data-testid="stAppViewContainer"] div[data-baseweb="select"] svg,
+[data-theme="dark"] div[data-baseweb="select"] svg { fill: #94a3b8 !important; }
+.st-dark [data-testid="stAppViewContainer"] div[data-baseweb="menu"],
+[data-theme="dark"] div[data-baseweb="menu"] {
+    background: #1e2130 !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+}
+.st-dark [data-testid="stAppViewContainer"] li[role="option"],
+.st-dark [data-testid="stAppViewContainer"] div[data-baseweb="menu"] li,
+[data-theme="dark"] li[role="option"] {
+    color: #e2e8f0 !important;
+    background: #1e2130 !important;
+    -webkit-text-fill-color: #e2e8f0 !important;
+}
+.st-dark [data-testid="stAppViewContainer"] li[role="option"]:hover,
+[data-theme="dark"] li[role="option"]:hover {
+    background: #2d3a5e !important;
+    color: #93c5fd !important;
+    -webkit-text-fill-color: #93c5fd !important;
+}
+
+/* Dark mode LABELS — bright enough to contrast on #0e1117 */
+.st-dark [data-testid="stAppViewContainer"] .stSelectbox label,
+[data-theme="dark"] .stSelectbox label {
+    color: #94a3b8 !important;
+    -webkit-text-fill-color: #94a3b8 !important;
+}
+.st-dark [data-testid="stAppViewContainer"] .stSlider label,
+[data-theme="dark"] .stSlider label {
+    color: #94a3b8 !important;
+    -webkit-text-fill-color: #94a3b8 !important;
+}
+.st-dark [data-testid="stAppViewContainer"] [data-testid="stDateInput"] label,
+[data-theme="dark"] [data-testid="stDateInput"] label {
+    color: #94a3b8 !important;
+    -webkit-text-fill-color: #94a3b8 !important;
+}
+.st-dark [data-testid="stAppViewContainer"] .stNumberInput label,
+[data-theme="dark"] .stNumberInput label {
+    color: #94a3b8 !important;
+    -webkit-text-fill-color: #94a3b8 !important;
+}
+/* Dark mode inputs */
+.st-dark [data-testid="stAppViewContainer"] [data-testid="stDateInput"] input,
+.st-dark [data-testid="stAppViewContainer"] .stNumberInput input,
+[data-theme="dark"] [data-testid="stDateInput"] input,
+[data-theme="dark"] .stNumberInput input {
+    background: #1e2130 !important;
+    border: 1.5px solid rgba(255,255,255,0.18) !important;
+    color: #e2e8f0 !important;
+    -webkit-text-fill-color: #e2e8f0 !important;
+}
+
+/* Method 2: media query as additional fallback */
 @media (prefers-color-scheme: dark) {
-    .stSelectbox label {
+    div[data-baseweb="select"] > div:first-child {
+        background-color: #1e2130 !important;
+        border-color: rgba(255,255,255,0.18) !important;
+    }
+    div[data-baseweb="select"] [class*="singleValue"],
+    div[data-baseweb="select"] [class*="placeholder"],
+    div[data-baseweb="select"] input {
+        color: #e2e8f0 !important;
+        -webkit-text-fill-color: #e2e8f0 !important;
+    }
+    div[data-baseweb="menu"] {
+        background: #1e2130 !important;
+    }
+    li[role="option"] {
+        color: #e2e8f0 !important;
+        background: #1e2130 !important;
+        -webkit-text-fill-color: #e2e8f0 !important;
+    }
+    .stSelectbox label,
+    .stSlider label,
+    [data-testid="stDateInput"] label,
+    .stNumberInput label {
         color: #94a3b8 !important;
+        -webkit-text-fill-color: #94a3b8 !important;
     }
 }
 
-/* ── SIDEBAR SELECTBOX (always dark background) ──────────────── */
+/* ── SIDEBAR (always dark) ──────────────────────────────────────── */
+[data-testid="stSidebar"] {
+    background: var(--bg-sidebar) !important;
+    border-right: 1px solid rgba(255,255,255,0.06) !important;
+}
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] .stMarkdown,
+[data-testid="stSidebar"] span { color: #cbd5e1 !important; }
+[data-testid="stSidebar"] .stSelectbox label {
+    color: #94a3b8 !important;
+    -webkit-text-fill-color: #94a3b8 !important;
+    font-size: 0.72rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+}
 [data-testid="stSidebar"] div[data-baseweb="select"] > div:first-child {
     background-color: rgba(255,255,255,0.10) !important;
     border: 1px solid rgba(255,255,255,0.20) !important;
+    border-radius: 8px !important;
 }
 [data-testid="stSidebar"] div[data-baseweb="select"] [class*="singleValue"],
 [data-testid="stSidebar"] div[data-baseweb="select"] [class*="placeholder"],
@@ -360,209 +340,24 @@ li[aria-selected="true"] {
     color: #e2e8f0 !important;
     -webkit-text-fill-color: #e2e8f0 !important;
 }
-[data-testid="stSidebar"] div[data-baseweb="select"] svg {
-    fill: #94a3b8 !important;
-}
+[data-testid="stSidebar"] div[data-baseweb="select"] svg { fill: #94a3b8 !important; }
 [data-testid="stSidebar"] div[data-baseweb="menu"] {
     background: #1e2d50 !important;
     border: 1px solid rgba(255,255,255,0.15) !important;
 }
-[data-testid="stSidebar"] li[role="option"],
-[data-testid="stSidebar"] div[data-baseweb="menu"] li {
+[data-testid="stSidebar"] li[role="option"] {
     color: #e2e8f0 !important;
-    background-color: #1e2d50 !important;
+    background: #1e2d50 !important;
+    -webkit-text-fill-color: #e2e8f0 !important;
 }
 [data-testid="stSidebar"] li[role="option"]:hover {
-    background-color: rgba(0,82,204,0.35) !important;
+    background: rgba(0,82,204,0.35) !important;
     color: #93c5fd !important;
-}
-
-/* ── SIDEBAR ─────────────────────────────────────────────────────── */
-[data-testid="stSidebar"] {
-    background: var(--bg-sidebar) !important;
-    border-right: 1px solid rgba(255,255,255,0.06) !important;
-}
-[data-testid="stSidebar"]::before {
-    content: '';
-    position: fixed;
-    top: 0; left: 0;
-    width: 280px; height: 100vh;
-    background: linear-gradient(180deg,
-        rgba(0,82,204,0.15) 0%,
-        transparent 40%,
-        rgba(245,166,35,0.05) 100%);
-    pointer-events: none;
-    z-index: 0;
-}
-
-/* Sidebar generic text */
-[data-testid="stSidebar"] p,
-[data-testid="stSidebar"] label,
-[data-testid="stSidebar"] .stMarkdown,
-[data-testid="stSidebar"] span {
-    color: #cbd5e1 !important;
-}
-
-/* ── SIDEBAR SELECTBOX ─────────────── KEY FIX ──────────────────── */
-/* The box itself — semi-transparent dark on dark sidebar */
-[data-testid="stSidebar"] div[data-baseweb="select"] > div {
-    background-color: rgba(255,255,255,0.10) !important;
-    border: 1px solid rgba(255,255,255,0.18) !important;
-    border-radius: var(--radius-sm) !important;
-    color: #e2e8f0 !important;
-}
-/* Selected value text inside sidebar dropdown */
-[data-testid="stSidebar"] div[data-baseweb="select"] span,
-[data-testid="stSidebar"] div[data-baseweb="select"] div[class*="singleValue"],
-[data-testid="stSidebar"] div[data-baseweb="select"] div[class*="placeholder"],
-[data-testid="stSidebar"] div[data-baseweb="select"] input {
-    color: #e2e8f0 !important;
-}
-/* Dropdown arrow / icons inside sidebar select */
-[data-testid="stSidebar"] div[data-baseweb="select"] svg {
-    fill: #94a3b8 !important;
-}
-/* Sidebar label above dropdown */
-[data-testid="stSidebar"] .stSelectbox label {
-    color: #94a3b8 !important;
-    font-size: 0.72rem !important;
-    font-weight: 600 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
-}
-/* Dropdown open list (popover) — needs white bg for readability */
-[data-testid="stSidebar"] div[data-baseweb="popover"] ul,
-[data-testid="stSidebar"] ul[role="listbox"] {
-    background-color: #1e2d50 !important;
-    border: 1px solid rgba(255,255,255,0.15) !important;
-}
-[data-testid="stSidebar"] div[data-baseweb="popover"] li,
-[data-testid="stSidebar"] ul[role="listbox"] li {
-    color: #e2e8f0 !important;
-    background-color: transparent !important;
-}
-[data-testid="stSidebar"] ul[role="listbox"] li:hover {
-    background-color: rgba(0,82,204,0.25) !important;
-}
-
-/* ── SIDEBAR TOGGLES ─────────────────────────────────────────────── */
-[data-testid="stSidebar"] .stToggle label,
-[data-testid="stSidebar"] .stToggle p {
-    color: #cbd5e1 !important;
-}
-
-/* ── INPUTS — MAIN AREA ─────────────────────────────────────────── */
-input, textarea {
-    color: #0f172a !important;
-    background-color: #f8faff !important;
-}
-.stNumberInput > div > div > input {
-    background: #f8faff !important;
-    border: 1.5px solid var(--border) !important;
-    border-radius: var(--radius-sm) !important;
-    font-family: 'Plus Jakarta Sans', sans-serif !important;
-    font-weight: 600 !important;
-    color: #0f172a !important;
-}
-[data-testid="stDateInput"] > div > div > input {
-    background: #f8faff !important;
-    border: 1.5px solid var(--border) !important;
-    border-radius: var(--radius-sm) !important;
-    font-family: 'Plus Jakarta Sans', sans-serif !important;
-    font-weight: 600 !important;
-    color: #0f172a !important;
-}
-[data-testid="stDateInput"] label {
-    font-size: 0.78rem !important;
-    font-weight: 600 !important;
-    color: #475569 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
-}
-@media (prefers-color-scheme: dark) {
-    [data-testid="stDateInput"] label { color: #94a3b8 !important; }
+    -webkit-text-fill-color: #93c5fd !important;
 }
 
 /* ── SLIDER ─────────────────────────────────────────────────────── */
-.stSlider label {
-    font-size: 0.78rem !important;
-    font-weight: 600 !important;
-    color: #475569 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
-}
-@media (prefers-color-scheme: dark) {
-    .stSlider label { color: #94a3b8 !important; }
-}
-.stSlider > div > div > div > div {
-    background: var(--primary) !important;
-}
-
-/* ── SIDEBAR ─────────────────────────────────────────────────────── */
-.sb-brand {
-    font-family: 'Syne', sans-serif;
-    font-size: 1.45rem;
-    font-weight: 900;
-    color: #fff;
-    letter-spacing: -0.5px;
-    line-height: 1.1;
-}
-.sb-brand span { color: var(--accent); }
-.sb-tagline {
-    font-size: 0.65rem;
-    color: #64748b;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    margin-top: 2px;
-}
-.sb-section-label {
-    font-size: 0.58rem !important;
-    font-weight: 700 !important;
-    letter-spacing: 2px !important;
-    text-transform: uppercase !important;
-    color: var(--accent) !important;
-    margin: 20px 0 10px !important;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-.sb-section-label::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: rgba(245,166,35,0.25);
-}
-.sb-info-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 6px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-    font-size: 0.76rem;
-}
-.sb-info-row .k { color: #64748b; }
-.sb-info-row .v { color: #e2e8f0; font-weight: 600; font-variant-numeric: tabular-nums; }
-.sb-model-ok {
-    background: rgba(34,197,94,0.12);
-    border: 1px solid rgba(34,197,94,0.3);
-    color: #4ade80;
-    border-radius: var(--radius-sm);
-    padding: 9px 12px;
-    font-size: 0.76rem;
-    font-weight: 600;
-    margin-top: 10px;
-    line-height: 1.5;
-}
-.sb-model-err {
-    background: rgba(239,68,68,0.12);
-    border: 1px solid rgba(239,68,68,0.3);
-    color: #f87171;
-    border-radius: var(--radius-sm);
-    padding: 9px 12px;
-    font-size: 0.76rem;
-    font-weight: 600;
-    margin-top: 10px;
-}
+.stSlider > div > div > div > div { background: var(--primary) !important; }
 
 /* ── PAGE HEADER ─────────────────────────────────────────────────── */
 .page-header {
@@ -574,23 +369,6 @@ input, textarea {
     overflow: hidden;
     box-shadow: 0 8px 32px rgba(0,82,204,0.25);
 }
-.page-header::before {
-    content: '✈';
-    position: absolute;
-    right: 36px; top: 16px;
-    font-size: 8rem;
-    opacity: 0.05;
-    transform: rotate(-20deg) scale(1.2);
-    line-height: 1;
-}
-.page-header::after {
-    content: '';
-    position: absolute;
-    bottom: -40px; left: -40px;
-    width: 200px; height: 200px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(245,166,35,0.12) 0%, transparent 70%);
-}
 .page-header h1 {
     font-family: 'Syne', sans-serif;
     font-size: 2.1rem;
@@ -598,51 +376,23 @@ input, textarea {
     margin: 0 0 6px;
     color: #fff;
     letter-spacing: -0.5px;
-    line-height: 1.1;
 }
 .page-header h1 em { color: var(--accent); font-style: normal; }
-.page-header p {
-    color: rgba(255,255,255,0.55);
-    font-size: 0.88rem;
-    margin: 0;
-    font-weight: 400;
-}
+.page-header p { color: rgba(255,255,255,0.55); font-size: 0.88rem; margin: 0; }
 .model-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    margin-top: 14px;
-    background: rgba(34,197,94,0.15);
-    border: 1px solid rgba(34,197,94,0.4);
-    color: #4ade80;
-    border-radius: 20px;
-    padding: 4px 14px;
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.5px;
+    display: inline-flex; align-items: center; gap: 5px; margin-top: 14px;
+    background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.4);
+    color: #4ade80; border-radius: 20px; padding: 4px 14px;
+    font-size: 0.72rem; font-weight: 700;
 }
 .model-pill-warn {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    margin-top: 14px;
-    background: rgba(245,158,11,0.15);
-    border: 1px solid rgba(245,158,11,0.4);
-    color: #fbbf24;
-    border-radius: 20px;
-    padding: 4px 14px;
-    font-size: 0.72rem;
-    font-weight: 700;
+    display: inline-flex; align-items: center; gap: 5px; margin-top: 14px;
+    background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.4);
+    color: #fbbf24; border-radius: 20px; padding: 4px 14px;
+    font-size: 0.72rem; font-weight: 700;
 }
 
 /* ── FORM CARD ───────────────────────────────────────────────────── */
-[data-testid="stForm"] {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    padding: 28px 32px;
-    box-shadow: var(--shadow-md);
-}
 .form-card {
     background: var(--bg-card);
     border: 1px solid var(--border);
@@ -652,555 +402,209 @@ input, textarea {
     margin-bottom: 24px;
 }
 .form-section-title {
-    font-size: 0.62rem;
-    font-weight: 800;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--primary);
-    margin-bottom: 16px;
-    padding-bottom: 8px;
+    font-size: 0.62rem; font-weight: 800; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--primary);
+    margin-bottom: 16px; padding-bottom: 8px;
     border-bottom: 2px solid var(--primary-light);
-    display: flex;
-    align-items: center;
-    gap: 6px;
+    display: flex; align-items: center; gap: 6px;
 }
 
 /* ── PREDICT BUTTON ─────────────────────────────────────────────── */
-.stFormSubmitButton > button,
 button[kind="primary"] {
     background: linear-gradient(90deg, var(--primary), var(--primary-dark)) !important;
-    color: white !important;
-    font-family: 'Syne', sans-serif !important;
-    font-weight: 700 !important;
-    font-size: 1rem !important;
-    border-radius: var(--radius-md) !important;
-    border: none !important;
+    color: white !important; font-family: 'Syne', sans-serif !important;
+    font-weight: 700 !important; font-size: 1rem !important;
+    border-radius: var(--radius-md) !important; border: none !important;
     padding: 15px 28px !important;
-    letter-spacing: 0.3px;
-    transition: all 0.2s ease !important;
 }
-.stFormSubmitButton > button:hover,
 button[kind="primary"]:hover {
     transform: translateY(-1px) !important;
     box-shadow: 0 8px 24px rgba(0,82,204,0.35) !important;
 }
-.stFormSubmitButton > button:disabled {
-    background: #94a3b8 !important;
-    cursor: not-allowed !important;
-    transform: none !important;
-    box-shadow: none !important;
-}
 
 /* ── RESULT TICKET ──────────────────────────────────────────────── */
 .result-ticket {
-    background: var(--bg-card);
-    border-radius: var(--radius-xl);
-    border: 1px solid var(--border);
-    overflow: hidden;
-    box-shadow: var(--shadow-lg);
-    margin-bottom: 24px;
+    background: var(--bg-card); border-radius: var(--radius-xl);
+    border: 1px solid var(--border); overflow: hidden;
+    box-shadow: var(--shadow-lg); margin-bottom: 24px;
 }
 .ticket-header {
     background: linear-gradient(135deg, #09122c 0%, #0d1f5c 50%, #0052cc 100%);
-    padding: 20px 28px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    position: relative;
-    overflow: hidden;
+    padding: 20px 28px; display: flex; justify-content: space-between;
+    align-items: center; position: relative; overflow: hidden;
 }
 .ticket-header::after {
-    content: '';
-    position: absolute; top: 0; left: 0; right: 0;
-    height: 2px;
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
     background: linear-gradient(90deg, var(--accent), #ff6b35, var(--accent));
 }
-.ticket-airline {
-    font-family: 'Syne', sans-serif;
-    color: white;
-    font-size: 0.85rem;
-    font-weight: 700;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-}
-.ticket-date { color: rgba(255,255,255,0.5); font-size: 0.72rem; margin-top: 2px; }
-.ticket-tag {
-    background: rgba(245,166,35,0.18);
-    border: 1px solid rgba(245,166,35,0.45);
-    color: var(--accent);
-    border-radius: 20px;
-    padding: 4px 12px;
-    font-size: 0.7rem;
-    font-weight: 700;
-    margin-left: 6px;
-    letter-spacing: 0.3px;
-}
-.ticket-body {
-    padding: 28px 32px;
-    display: flex;
-    align-items: center;
-    gap: 0;
-    background: white;
-}
+.ticket-airline { font-family: 'Syne', sans-serif; color: white; font-size: 0.85rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+.ticket-tag { background: rgba(245,166,35,0.18); border: 1px solid rgba(245,166,35,0.45); color: var(--accent); border-radius: 20px; padding: 4px 12px; font-size: 0.7rem; font-weight: 700; margin-left: 6px; }
+.ticket-body { padding: 28px 32px; display: flex; align-items: center; background: white; }
 .ticket-city { text-align: center; min-width: 100px; flex-shrink: 0; }
-.ticket-city .code {
-    font-family: 'Syne', sans-serif;
-    font-size: 2.6rem;
-    font-weight: 900;
-    color: var(--text-primary);
-    line-height: 1;
-    letter-spacing: -1px;
-}
-.ticket-city .name {
-    font-size: 0.65rem;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    margin-top: 5px;
-    font-weight: 600;
-}
-.ticket-city .time {
-    font-size: 0.88rem;
-    color: var(--primary);
-    font-weight: 700;
-    margin-top: 8px;
-    font-variant-numeric: tabular-nums;
-}
-.ticket-mid {
-    flex: 1;
-    text-align: center;
-    padding: 0 24px;
-    position: relative;
-}
-.ticket-mid .stops-label {
-    font-size: 0.65rem;
-    color: var(--accent);
-    font-weight: 800;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    margin-bottom: 8px;
-    display: block;
-}
-.ticket-mid .dash-line {
-    border-top: 2px dashed #cbd5e1;
-    position: relative;
-    margin: 0;
-}
-.ticket-mid .plane {
-    position: absolute;
-    top: -13px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: white;
-    padding: 0 10px;
-    font-size: 1.15rem;
-    line-height: 1;
-}
-.ticket-mid .dur {
-    font-size: 0.73rem;
-    color: var(--text-muted);
-    margin-top: 8px;
-    line-height: 1.8;
-    display: block;
-}
-.ticket-footer {
-    border-top: 2px dashed #e2e8f0;
-    padding: 22px 32px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: #fafbff;
-}
-.price-label {
-    font-size: 0.62rem;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    margin-bottom: 6px;
-    font-weight: 700;
-}
-.price-amount {
-    font-family: 'Syne', sans-serif;
-    font-size: 2.8rem;
-    font-weight: 900;
-    color: var(--primary);
-    line-height: 1;
-    letter-spacing: -1px;
-}
-.vs-avg-up   { color: var(--danger);  font-weight: 700; font-size: 0.8rem; margin-top: 5px; display: block; }
+.ticket-city .code { font-family: 'Syne', sans-serif; font-size: 2.6rem; font-weight: 900; color: var(--text-primary); line-height: 1; }
+.ticket-city .name { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 5px; font-weight: 600; }
+.ticket-city .time { font-size: 0.88rem; color: var(--primary); font-weight: 700; margin-top: 8px; }
+.ticket-mid { flex: 1; text-align: center; padding: 0 24px; position: relative; }
+.ticket-mid .stops-label { font-size: 0.65rem; color: var(--accent); font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; display: block; }
+.ticket-mid .dash-line { border-top: 2px dashed #cbd5e1; position: relative; }
+.ticket-mid .plane { position: absolute; top: -13px; left: 50%; transform: translateX(-50%); background: white; padding: 0 10px; font-size: 1.15rem; }
+.ticket-mid .dur { font-size: 0.73rem; color: var(--text-muted); margin-top: 8px; display: block; }
+.ticket-footer { border-top: 2px dashed #e2e8f0; padding: 22px 32px; display: flex; justify-content: space-between; align-items: center; background: #fafbff; }
+.price-label { font-size: 0.62rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px; font-weight: 700; }
+.price-amount { font-family: 'Syne', sans-serif; font-size: 2.8rem; font-weight: 900; color: var(--primary); line-height: 1; }
+.vs-avg-up { color: var(--danger); font-weight: 700; font-size: 0.8rem; margin-top: 5px; display: block; }
 .vs-avg-down { color: var(--success); font-weight: 700; font-size: 0.8rem; margin-top: 5px; display: block; }
 .route-info-block { text-align: center; }
-.route-info-label {
-    font-size: 0.58rem;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    margin-bottom: 10px;
-    font-weight: 700;
-}
+.route-info-label { font-size: 0.58rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px; font-weight: 700; }
 .route-info-items { display: flex; gap: 24px; justify-content: center; }
 .route-info-item { text-align: center; }
 .route-info-item .icon { font-size: 1.1rem; display: block; margin-bottom: 3px; }
-.route-info-item .val {
-    font-family: 'Syne', sans-serif;
-    font-size: 0.88rem;
-    font-weight: 800;
-    color: var(--text-primary);
-    display: block;
-}
-.route-info-item .sub {
-    font-size: 0.6rem;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    font-weight: 600;
-}
+.route-info-item .val { font-family: 'Syne', sans-serif; font-size: 0.88rem; font-weight: 800; color: var(--text-primary); display: block; }
+.route-info-item .sub { font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
 .per-pax-block { text-align: right; }
-.per-pax-label {
-    font-size: 0.62rem;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    font-weight: 700;
-    margin-bottom: 4px;
-}
-.per-pax-val {
-    font-family: 'Syne', sans-serif;
-    font-size: 1.45rem;
-    font-weight: 800;
-    color: var(--text-primary);
-}
-.dataset-avg {
-    font-size: 0.68rem;
-    color: var(--text-muted);
-    margin-top: 3px;
-}
-
-/* ── OUTPUT SECTION TITLES ──────────────────────────────────────── */
-.output-section-title {
-    font-family: 'Syne', sans-serif;
-    font-size: 0.95rem;
-    font-weight: 800;
-    color: var(--text-primary);
-    margin: 28px 0 14px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    letter-spacing: -0.2px;
-}
-.output-section-title::after {
-    content: '';
-    flex: 1;
-    height: 1.5px;
-    background: linear-gradient(90deg, var(--primary-light), transparent);
-    margin-left: 8px;
-}
-
-/* ── METRIC CARDS ────────────────────────────────────────────────── */
-[data-testid="stMetric"] {
-    background: var(--bg-card) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: var(--radius-md) !important;
-    padding: 16px 20px !important;
-    box-shadow: var(--shadow-sm) !important;
-}
-[data-testid="stMetricLabel"] > div {
-    font-size: 0.7rem !important;
-    font-weight: 700 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.8px !important;
-    color: var(--text-muted) !important;
-}
-[data-testid="stMetricValue"] > div {
-    font-family: 'Syne', sans-serif !important;
-    font-size: 1.5rem !important;
-    font-weight: 800 !important;
-    color: var(--text-primary) !important;
-}
-
-/* ── DATAFRAME ───────────────────────────────────────────────────── */
-.stDataFrame {
-    border-radius: var(--radius-md) !important;
-    overflow: hidden !important;
-    border: 1px solid var(--border) !important;
-    box-shadow: var(--shadow-sm) !important;
-}
-
-/* ── ALERTS ──────────────────────────────────────────────────────── */
-[data-testid="stAlert"] {
-    border-radius: var(--radius-md) !important;
-    font-size: 0.85rem !important;
-    font-weight: 500 !important;
-    border-left-width: 4px !important;
-}
-
-/* ── DIVIDER ─────────────────────────────────────────────────────── */
-hr {
-    border: none !important;
-    border-top: 1px solid var(--border) !important;
-    margin: 20px 0 !important;
-}
-
-/* ── DURATION INFO BOX ──────────────────────────────────────────── */
-.duration-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--primary-light);
-    border: 1.5px solid rgba(0,82,204,0.2);
-    border-radius: var(--radius-sm);
-    padding: 10px 16px;
-    font-size: 0.84rem;
-    font-weight: 600;
-    color: var(--primary);
-    margin: 8px 0 4px;
-    width: 100%;
-}
-.duration-chip .dur-val {
-    font-family: 'Syne', sans-serif;
-    font-size: 1rem;
-    font-weight: 900;
-    color: var(--primary-dark);
-}
-
-/* ── VALIDATION BADGES ──────────────────────────────────────────── */
-.valid-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    background: rgba(34,197,94,0.1);
-    border: 1px solid rgba(34,197,94,0.3);
-    color: #16a34a;
-    border-radius: 20px;
-    padding: 2px 10px;
-    font-size: 0.68rem;
-    font-weight: 700;
-    margin-top: 4px;
-}
-
-/* ── SCROLLBAR ───────────────────────────────────────────────────── */
+.per-pax-label { font-size: 0.62rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 4px; }
+.per-pax-val { font-family: 'Syne', sans-serif; font-size: 1.45rem; font-weight: 800; color: var(--text-primary); }
+.dataset-avg { font-size: 0.68rem; color: var(--text-muted); margin-top: 3px; }
+.output-section-title { font-family: 'Syne', sans-serif; font-size: 0.95rem; font-weight: 800; color: var(--text-primary); margin: 28px 0 14px; display: flex; align-items: center; gap: 8px; }
+.output-section-title::after { content: ''; flex: 1; height: 1.5px; background: linear-gradient(90deg, var(--primary-light), transparent); margin-left: 8px; }
+[data-testid="stMetric"] { background: var(--bg-card) !important; border: 1px solid var(--border) !important; border-radius: var(--radius-md) !important; padding: 16px 20px !important; }
+[data-testid="stMetricLabel"] > div { font-size: 0.7rem !important; font-weight: 700 !important; text-transform: uppercase !important; letter-spacing: 0.8px !important; color: var(--text-muted) !important; }
+[data-testid="stMetricValue"] > div { font-family: 'Syne', sans-serif !important; font-size: 1.5rem !important; font-weight: 800 !important; color: var(--text-primary) !important; }
+.valid-badge { display: inline-flex; align-items: center; gap: 4px; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: #16a34a; border-radius: 20px; padding: 2px 10px; font-size: 0.68rem; font-weight: 700; margin-top: 4px; }
+.duration-chip { display: inline-flex; align-items: center; gap: 8px; background: var(--primary-light); border: 1.5px solid rgba(0,82,204,0.2); border-radius: var(--radius-sm); padding: 10px 16px; font-size: 0.84rem; font-weight: 600; color: var(--primary); margin: 8px 0 4px; width: 100%; }
+.duration-chip .dur-val { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 900; color: var(--primary-dark); }
+.sb-brand { font-family: 'Syne', sans-serif; font-size: 1.45rem; font-weight: 900; color: #fff; }
+.sb-brand span { color: var(--accent); }
+.sb-tagline { font-size: 0.65rem; color: #64748b; letter-spacing: 2px; text-transform: uppercase; margin-top: 2px; }
+.sb-section-label { font-size: 0.58rem !important; font-weight: 700 !important; letter-spacing: 2px !important; text-transform: uppercase !important; color: var(--accent) !important; margin: 20px 0 10px !important; display: flex; align-items: center; gap: 6px; }
+.sb-section-label::after { content: ''; flex: 1; height: 1px; background: rgba(245,166,35,0.25); }
+.sb-info-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.76rem; }
+.sb-info-row .k { color: #64748b; }
+.sb-info-row .v { color: #e2e8f0; font-weight: 600; }
+.sb-model-ok { background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.3); color: #4ade80; border-radius: var(--radius-sm); padding: 9px 12px; font-size: 0.76rem; font-weight: 600; margin-top: 10px; line-height: 1.5; }
+.sb-model-err { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); color: #f87171; border-radius: var(--radius-sm); padding: 9px 12px; font-size: 0.76rem; font-weight: 600; margin-top: 10px; }
+hr { border: none !important; border-top: 1px solid var(--border) !important; margin: 20px 0 !important; }
 ::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-/* ══ NUCLEAR DROPDOWN FIX ══════════════════════════════════════════
-   Forces white bg + dark text on ALL Streamlit selectboxes in main area
-   -webkit-text-fill-color overrides even inherited color in Chrome/Safari
-   ════════════════════════════════════════════════════════════════ */
-div[data-baseweb="select"] > div:first-child {
-    background-color: #ffffff !important;
-    border: 1.5px solid #c8d6f0 !important;
-    border-radius: 8px !important;
-    min-height: 42px !important;
-}
-div[data-baseweb="select"] > div:first-child:hover {
-    border-color: #0052cc !important;
-    box-shadow: 0 0 0 3px rgba(0,82,204,0.12) !important;
-}
-div[data-baseweb="select"] div[class*="ValueContainer"] > div,
-div[data-baseweb="select"] div[class*="singleValue"],
-div[data-baseweb="select"] [class*="placeholder"],
-div[data-baseweb="select"] input {
-    color: #0f172a !important;
-    -webkit-text-fill-color: #0f172a !important;
-}
-div[data-baseweb="select"] svg path { fill: #64748b !important; }
-div[data-baseweb="menu"],
-div[data-baseweb="menu"] ul,
-div[data-baseweb="menu"] li,
-div[data-baseweb="popover"] li,
-li[role="option"] {
-    background-color: #ffffff !important;
-    color: #0f172a !important;
-}
-li[role="option"]:hover,
-div[data-baseweb="menu"] li:hover {
-    background-color: #e8f0fe !important;
-    color: #0052cc !important;
-}
-[data-testid="stSidebar"] div[data-baseweb="select"] > div:first-child {
-    background-color: rgba(255,255,255,0.08) !important;
-    border: 1px solid rgba(255,255,255,0.18) !important;
-}
-[data-testid="stSidebar"] div[data-baseweb="select"] div[class*="singleValue"],
-[data-testid="stSidebar"] div[data-baseweb="select"] [class*="placeholder"],
-[data-testid="stSidebar"] div[data-baseweb="select"] input {
-    color: #e2e8f0 !important;
-    -webkit-text-fill-color: #e2e8f0 !important;
-}
-[data-testid="stSidebar"] div[data-baseweb="select"] svg path { fill: #94a3b8 !important; }
 </style>
 """, unsafe_allow_html=True)
 
 
-
-# ── JavaScript: bulletproof theme detection + selectbox text fix ────────────
+# ── JavaScript: Runtime theme detector ───────────────────────────────────────
+# Detects actual Streamlit theme at runtime and applies correct colors
+# Runs on every DOM mutation (Streamlit re-render) via MutationObserver
 st.markdown("""
 <script>
 (function() {
-
-    /* ── Theme detection: 3-method cascade ──────────────────────────────────
-       Method 1: data-theme attribute on <html>  (Streamlit >= 1.27)
-       Method 2: Streamlit's --background-color CSS variable  (all versions)
-       Method 3: Computed bg of app container  (last resort)
-    ─────────────────────────────────────────────────────────────────────── */
-    function getIsDark() {
-        // Method 1
-        const attr = document.documentElement.getAttribute('data-theme');
-        if (attr === 'dark')  return true;
-        if (attr === 'light') return false;
-
-        // Method 2 — Streamlit sets --background-color on :root in ALL versions
-        const stBg = getComputedStyle(document.documentElement)
-                        .getPropertyValue('--background-color').trim();
-        if (stBg && stBg !== 'transparent' && stBg !== '') {
-            return colorIsDark(stBg);
-        }
-
-        // Method 3 — actual rendered background of the app container
-        const appEl = document.querySelector('[data-testid="stAppViewContainer"]')
-                   || document.querySelector('.stApp');
-        if (appEl) {
-            const bg = getComputedStyle(appEl).backgroundColor;
-            // Skip transparent (rgba(0,0,0,0)) — that is NOT dark!
-            if (!bg.includes('rgba(0, 0, 0, 0)') && bg !== 'transparent') {
-                return colorIsDark(bg);
+    function getTheme() {
+        // Method 1: Check Streamlit's stored theme
+        try {
+            const stored = localStorage.getItem('stActiveTheme');
+            if (stored) {
+                const t = JSON.parse(stored);
+                if (t && t.base) return t.base;
             }
+        } catch(e) {}
+        // Method 2: Check background color brightness
+        const el = document.querySelector('[data-testid="stAppViewContainer"]') || document.body;
+        const bg = window.getComputedStyle(el).backgroundColor;
+        const m = bg.match(/\\d+/g);
+        if (m && m.length >= 3) {
+            const lum = (parseInt(m[0]) * 299 + parseInt(m[1]) * 587 + parseInt(m[2]) * 114) / 1000;
+            return lum < 128 ? 'dark' : 'light';
         }
-        return false; // default: light
+        return 'light';
     }
 
-    function colorIsDark(cssColor) {
-        // Handle hex
-        const hex = cssColor.match(/^#([0-9a-f]{3,8})/i);
-        if (hex) {
-            const h = hex[1];
-            const full = h.length === 3
-                ? h.split('').map(c => c+c).join('')
-                : h.slice(0, 6);
-            const r = parseInt(full.slice(0,2),16);
-            const g = parseInt(full.slice(2,4),16);
-            const b = parseInt(full.slice(4,6),16);
-            return !isNaN(r+g+b) && (r+g+b) < 200;
-        }
-        // Handle rgb / rgba
-        const parts = cssColor.match(/[\\d.]+/g);
-        if (parts && parts.length >= 3) {
-            const alpha = parts.length >= 4 ? parseFloat(parts[3]) : 1;
-            const sum   = parseInt(parts[0]) + parseInt(parts[1]) + parseInt(parts[2]);
-            return alpha > 0 && sum > 0 && sum < 200;
-        }
-        return false;
-    }
-
-    /* ── Apply styles to every selectbox on the page ────────────────────── */
     function applyTheme() {
-        const isDark = getIsDark();
+        const isDark = getTheme() === 'dark';
 
         const LIGHT = {
-            text:       '#0f172a',
-            boxBg:      '#ffffff',
-            boxBorder:  '1.5px solid #c8d6f0',
-            menuBg:     '#ffffff',
-            optionBg:   '#ffffff',
-            optionText: '#0f172a',
-            label:      '#475569',
-            svgFill:    '#64748b'
+            selectBg: '#ffffff',
+            selectBorder: '1.5px solid #c8d6f0',
+            valueColor: '#111827',
+            menuBg: '#ffffff',
+            menuItemColor: '#111827',
+            labelColor: '#374151',
+            inputBg: '#ffffff',
         };
         const DARK = {
-            text:       'rgba(250,250,250,0.90)',
-            boxBg:      '#1e2235',
-            boxBorder:  '1.5px solid rgba(250,250,250,0.18)',
-            menuBg:     '#1e2235',
-            optionBg:   '#1e2235',
-            optionText: 'rgba(250,250,250,0.90)',
-            label:      '#94a3b8',
-            svgFill:    'rgba(250,250,250,0.55)'
+            selectBg: '#1e2130',
+            selectBorder: '1.5px solid rgba(255,255,255,0.18)',
+            valueColor: 'rgba(250,250,250,0.87)',
+            menuBg: '#1e2130',
+            menuItemColor: 'rgba(250,250,250,0.87)',
+            labelColor: '#94a3b8',
+            inputBg: '#1e2130',
         };
         const T = isDark ? DARK : LIGHT;
 
-        /* Labels */
+        const set = (el, prop, val) => el.style.setProperty(prop, val, 'important');
+
+        // Apply to all selectboxes NOT in sidebar
+        document.querySelectorAll('div[data-baseweb="select"]').forEach(sel => {
+            if (sel.closest('[data-testid="stSidebar"]')) return;
+            const box = sel.querySelector(':scope > div:first-child');
+            if (box) {
+                set(box, 'background-color', T.selectBg);
+                set(box, 'border', T.selectBorder);
+            }
+            sel.querySelectorAll('[class*="singleValue"],[class*="placeholder"]').forEach(el => {
+                set(el, 'color', T.valueColor);
+                set(el, '-webkit-text-fill-color', T.valueColor);
+            });
+            sel.querySelectorAll('input').forEach(el => {
+                set(el, 'color', T.valueColor);
+                set(el, '-webkit-text-fill-color', T.valueColor);
+            });
+        });
+
+        // Dropdown menus
+        document.querySelectorAll('div[data-baseweb="menu"]').forEach(menu => {
+            if (menu.closest('[data-testid="stSidebar"]')) return;
+            set(menu, 'background-color', T.menuBg);
+            menu.querySelectorAll('li[role="option"]').forEach(li => {
+                set(li, 'color', T.menuItemColor);
+                set(li, 'background-color', T.menuBg);
+                set(li, '-webkit-text-fill-color', T.menuItemColor);
+            });
+        });
+
+        // Labels (selectbox, slider, date, number)
+        const labelSels = [
+            '.stSelectbox label',
+            '.stSlider label',
+            '[data-testid="stDateInput"] label',
+            '.stNumberInput label'
+        ].join(',');
+        document.querySelectorAll(labelSels).forEach(el => {
+            if (el.closest('[data-testid="stSidebar"]')) return;
+            set(el, 'color', T.labelColor);
+            set(el, '-webkit-text-fill-color', T.labelColor);
+        });
+
+        // Text inputs
         document.querySelectorAll(
-            '.stSelectbox label, .stSlider label, ' +
-            '[data-testid="stDateInput"] label, .stNumberInput label'
+            '[data-testid="stDateInput"] input, .stNumberInput input'
         ).forEach(el => {
             if (el.closest('[data-testid="stSidebar"]')) return;
-            el.style.setProperty('color', T.label, 'important');
-            el.style.setProperty('-webkit-text-fill-color', T.label, 'important');
-        });
-
-        /* Selectbox outer box */
-        document.querySelectorAll('div[data-baseweb="select"] > div:first-child').forEach(el => {
-            if (el.closest('[data-testid="stSidebar"]')) return;
-            el.style.setProperty('background-color', T.boxBg, 'important');
-            el.style.setProperty('border', T.boxBorder, 'important');
-        });
-
-        /* ── Selectbox VALUE / PLACEHOLDER text ─────────────────────────
-           We collect every possible matching node into a Set (dedup), then
-           style them all. This covers every BaseWeb / Streamlit version.  */
-        const textNodes = new Set();
-        const SELECTORS = [
-            /* Structural — primary approach */
-            'div[data-baseweb="select"] > div > div > div:first-child',
-            'div[data-baseweb="select"] > div > div > span',
-            'div[data-baseweb="select"] span:not([aria-hidden="true"])',
-            /* Class-name fallbacks */
-            'div[data-baseweb="select"] [class*="singleValue"]',
-            'div[data-baseweb="select"] [class*="SingleValue"]',
-            'div[data-baseweb="select"] [class*="placeholder"]',
-            'div[data-baseweb="select"] [class*="Placeholder"]',
-            'div[data-baseweb="select"] [class*="Value"]',
-            /* Hidden input */
-            'div[data-baseweb="select"] input'
-        ];
-        SELECTORS.forEach(sel => {
-            try { document.querySelectorAll(sel).forEach(el => textNodes.add(el)); }
-            catch(e) {}
-        });
-
-        textNodes.forEach(el => {
-            if (el.closest('[data-testid="stSidebar"]')) return;
-            el.style.setProperty('color', T.text, 'important');
-            el.style.setProperty('-webkit-text-fill-color', T.text, 'important');
-            if (el.tagName === 'INPUT') {
-                el.style.setProperty('caret-color', T.text, 'important');
-            }
-        });
-
-        /* SVG arrows */
-        document.querySelectorAll('div[data-baseweb="select"] svg').forEach(el => {
-            if (el.closest('[data-testid="stSidebar"]')) return;
-            el.style.setProperty('fill', T.svgFill, 'important');
-        });
-
-        /* Dropdown menu */
-        document.querySelectorAll('div[data-baseweb="menu"]').forEach(el => {
-            el.style.setProperty('background', T.menuBg, 'important');
-        });
-
-        /* Dropdown options */
-        document.querySelectorAll('li[role="option"]').forEach(el => {
-            el.style.setProperty('color', T.optionText, 'important');
-            el.style.setProperty('background-color', T.optionBg, 'important');
+            set(el, 'background-color', T.inputBg);
+            set(el, 'color', T.valueColor);
+            set(el, '-webkit-text-fill-color', T.valueColor);
         });
     }
 
-    /* ── Run strategy ────────────────────────────────────────────────────── */
-    applyTheme();                               // immediate
+    // Run now and on every DOM mutation
+    applyTheme();
+    const obs = new MutationObserver(() => applyTheme());
+    obs.observe(document.body, { childList: true, subtree: true, attributes: true });
 
-    // Re-run after short delays to catch late React renders
-    setTimeout(applyTheme, 200);
-    setTimeout(applyTheme, 800);
-    setTimeout(applyTheme, 2000);
-
-    // Re-run on every DOM change (Streamlit re-renders on every interaction)
-    new MutationObserver(applyTheme)
-        .observe(document.body, { childList: true, subtree: true });
-
-    // Re-run on Streamlit postMessage (theme toggle sends a message)
-    window.addEventListener('message', applyTheme);
-
+    // Re-run when Streamlit theme toggle is clicked
+    window.addEventListener('message', e => {
+        if (e.data && e.data.type && e.data.type.includes('theme')) applyTheme();
+    });
+    // Poll every 500ms for theme changes
+    setInterval(applyTheme, 500);
 })();
 </script>
 """, unsafe_allow_html=True)
