@@ -688,6 +688,20 @@ hr {
 }
 [data-theme="dark"] .scenario-input-label { color: #93c5fd; }
 
+/* Keep expander summary labels/icons readable in dark-mode contexts. */
+[data-testid="stExpander"] details summary p,
+[data-testid="stExpander"] details summary span {
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
+    opacity: 1 !important;
+    font-weight: 700 !important;
+}
+[data-testid="stExpander"] details summary svg {
+    fill: #0f172a !important;
+    stroke: #0f172a !important;
+    opacity: 1 !important;
+}
+
 @media (max-width: 960px) {
     /* Hide decorative header glyph on smaller viewports to avoid text overlap. */
     .page-header::before { display: none; }
