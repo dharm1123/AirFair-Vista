@@ -103,6 +103,19 @@ st.markdown("""
     --radius-xl: 24px;
 }
 
+/* ── DARK MODE CSS VARIABLE OVERRIDES ─────────────────────────── */
+[data-theme="dark"] {
+    --bg-main:       #0e1117;
+    --bg-card:       #1a1f2e;
+    --text-primary:  #e2e8f0;
+    --text-secondary:#94a3b8;
+    --text-muted:    #64748b;
+    --border:        rgba(255,255,255,0.09);
+    --primary-light: rgba(0,82,204,0.20);
+    --shadow-md:     0 4px 16px rgba(0,0,0,0.40);
+    --shadow-lg:     0 8px 32px rgba(0,0,0,0.55);
+}
+
 html, body, [class*="css"] {
     font-family: 'Plus Jakarta Sans', sans-serif !important;
 }
@@ -238,6 +251,8 @@ li[role="option"] { font-size: 0.88rem !important; }
 .model-pill-warn { display: inline-flex; align-items: center; gap: 5px; margin-top: 14px; background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.4); color: #fbbf24; border-radius: 20px; padding: 4px 14px; font-size: 0.72rem; font-weight: 700; }
 .form-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px 32px 20px; box-shadow: var(--shadow-md); margin-bottom: 24px; }
 .form-section-title { font-size: 0.62rem; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--primary); margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--primary-light); display: flex; align-items: center; gap: 6px; }
+[data-theme="dark"] .form-section-title { color: #93c5fd; border-bottom-color: rgba(0,82,204,0.35); }
+[data-theme="dark"] .form-card { background: var(--bg-card); border-color: var(--border); }
 button[kind="primary"] { background: linear-gradient(90deg, var(--primary), var(--primary-dark)) !important; color: white !important; font-family: 'Syne', sans-serif !important; font-weight: 700 !important; font-size: 1rem !important; border-radius: var(--radius-md) !important; border: none !important; padding: 15px 28px !important; }
 button[kind="primary"]:hover { transform: translateY(-1px) !important; box-shadow: 0 8px 24px rgba(0,82,204,0.35) !important; }
 .result-ticket { background: var(--bg-card); border-radius: var(--radius-xl); border: 1px solid var(--border); overflow: hidden; box-shadow: var(--shadow-lg); margin-bottom: 24px; }
@@ -253,9 +268,11 @@ button[kind="primary"]:hover { transform: translateY(-1px) !important; box-shado
 .ticket-mid { flex: 1; text-align: center; padding: 0 24px; position: relative; }
 .ticket-mid .stops-label { font-size: 0.65rem; color: var(--accent); font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; display: block; }
 .ticket-mid .dash-line { border-top: 2px dashed #cbd5e1; position: relative; height: 24px; display: flex; align-items: center; justify-content: center; }
-.ticket-mid .plane { position: relative; top: auto; left: auto; transform: none; background: white; padding: 0 10px; font-size: 1.15rem; z-index: 1; display: inline-block; margin-top: -12px; }
+.ticket-mid .plane { position: relative; top: auto; left: auto; transform: none; background: var(--bg-card); padding: 0 10px; font-size: 1.15rem; z-index: 1; display: inline-block; margin-top: -12px; }
 .ticket-mid .dur { font-size: 0.73rem; color: var(--text-muted); margin-top: 12px; display: block; }
-.ticket-footer { border-top: 2px dashed #e2e8f0; padding: 22px 32px; display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); }
+.ticket-mid .dur .dur-src  { color: var(--text-secondary); font-weight: 600; }
+.ticket-mid .dur .dur-dist { color: var(--primary); font-weight: 600; }
+.ticket-footer { border-top: 2px dashed var(--border); padding: 22px 32px; display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); }
 .price-label { font-size: 0.62rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px; font-weight: 700; }
 .price-amount { font-family: 'Syne', sans-serif; font-size: 2.8rem; font-weight: 900; color: var(--primary); line-height: 1; }
 .vs-avg-up { color: var(--danger); font-weight: 700; font-size: 0.8rem; margin-top: 5px; display: block; }
@@ -276,6 +293,51 @@ button[kind="primary"]:hover { transform: translateY(-1px) !important; box-shado
 [data-testid="stMetric"] { background: var(--bg-card) !important; border: 1px solid var(--border) !important; border-radius: var(--radius-md) !important; padding: 16px 20px !important; }
 [data-testid="stMetricLabel"] > div { font-size: 0.7rem !important; font-weight: 700 !important; text-transform: uppercase !important; letter-spacing: 0.8px !important; color: var(--text-muted) !important; }
 [data-testid="stMetricValue"] > div { font-family: 'Syne', sans-serif !important; font-size: 1.5rem !important; font-weight: 800 !important; color: var(--text-primary) !important; }
+
+/* ── INSIGHT CARDS (airline comparison section) ──────────────── */
+.insight-cards-row { display: flex; gap: 14px; margin-top: 8px; flex-wrap: wrap; }
+.insight-card { flex: 1; min-width: 160px; border-radius: 10px; padding: 14px 16px; border: 1px solid; }
+.insight-card.green  { background: #f0fdf4; border-color: #bbf7d0; }
+.insight-card.blue   { background: #eff6ff; border-color: #bfdbfe; }
+.insight-card.orange { background: #fff7ed; border-color: #fed7aa; }
+.insight-card.purple { background: #fdf4ff; border-color: #e9d5ff; }
+[data-theme="dark"] .insight-card.green  { background: rgba(34,197,94,0.08);    border-color: rgba(34,197,94,0.22); }
+[data-theme="dark"] .insight-card.blue   { background: rgba(59,130,246,0.08);   border-color: rgba(59,130,246,0.22); }
+[data-theme="dark"] .insight-card.orange { background: rgba(234,88,12,0.08);    border-color: rgba(234,88,12,0.22); }
+[data-theme="dark"] .insight-card.purple { background: rgba(147,51,234,0.08);   border-color: rgba(147,51,234,0.22); }
+.insight-card-label { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+.insight-card-label.green  { color: #16a34a; }
+.insight-card-label.blue   { color: #0052cc; }
+.insight-card-label.orange { color: #ea580c; }
+.insight-card-label.purple { color: #9333ea; }
+.insight-card-title { font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 900; color: var(--text-primary); }
+.insight-card-value { font-size: 0.85rem; font-weight: 700; }
+.insight-card-value.green  { color: #16a34a; }
+.insight-card-value.blue   { color: #0052cc; }
+.insight-card-value.orange { color: #ea580c; }
+.insight-card-value.purple { color: #9333ea; }
+
+/* ── LIVE ESTIMATE BANNER ─────────────────────────────────────── */
+.live-estimate-card { background: linear-gradient(90deg,#eff6ff,#dbeafe); border: 1.5px solid #bfdbfe; border-radius: 10px; padding: 12px 20px; display: flex; align-items: center; gap: 16px; margin-bottom: 4px; flex-wrap: wrap; }
+[data-theme="dark"] .live-estimate-card { background: linear-gradient(90deg,rgba(59,130,246,0.10),rgba(96,165,250,0.15)); border-color: rgba(59,130,246,0.30); }
+.live-estimate-label { font-size: 0.65rem; font-weight: 800; color: #3b82f6; text-transform: uppercase; letter-spacing: 1.5px; }
+.live-estimate-price { font-family: Syne,sans-serif; font-size: 1.6rem; font-weight: 900; color: #0052cc; letter-spacing: -1px; }
+[data-theme="dark"] .live-estimate-price { color: #60a5fa; }
+.live-estimate-diff { font-size: 0.78rem; font-weight: 600; }
+.live-estimate-meta { font-size: 0.72rem; color: var(--text-muted); margin-left: auto; }
+
+/* ── SCENARIO COMPARISON CARDS ───────────────────────────────── */
+.scenario-result-card { border-radius: 12px; padding: 16px; text-align: center; border: 2px solid; }
+.scenario-result-card.best    { background: #f0fdf4; border-color: #22c55e; }
+.scenario-result-card.default { background: #eff6ff; border-color: #bfdbfe; }
+[data-theme="dark"] .scenario-result-card.best    { background: rgba(34,197,94,0.08);  border-color: #22c55e; }
+[data-theme="dark"] .scenario-result-card.default { background: rgba(59,130,246,0.08); border-color: rgba(59,130,246,0.35); }
+.scenario-result-label  { font-size: 0.62rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+.scenario-result-airline{ font-size: 0.82rem; font-weight: 700; color: var(--text-primary); margin: 4px 0; }
+.scenario-result-detail { font-size: 0.7rem; color: var(--text-secondary); }
+.scenario-result-price  { font-family: Syne,sans-serif; font-size: 2rem; font-weight: 900; color: #0052cc; margin: 8px 0; }
+[data-theme="dark"] .scenario-result-price { color: #60a5fa; }
+.scenario-result-route  { font-size: 0.68rem; color: var(--text-muted); }
 .valid-badge { display: inline-flex; align-items: center; gap: 4px; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: #16a34a; border-radius: 20px; padding: 2px 10px; font-size: 0.68rem; font-weight: 700; margin-top: 4px; }
 .duration-chip { display: inline-flex; align-items: center; gap: 8px; background: var(--primary-light); border: 1.5px solid rgba(0,82,204,0.2); border-radius: var(--radius-sm); padding: 10px 16px; font-size: 0.84rem; font-weight: 600; color: var(--primary); margin: 8px 0 4px; width: 100%; }
 .duration-chip .dur-val { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 900; color: var(--primary-dark); }
@@ -349,6 +411,30 @@ st.markdown("""
         // Only re-apply if theme changed (or elements are new)
         var forceUpdate = (themeKey !== lastTheme);
         lastTheme = themeKey;
+
+        // ── Patch CSS custom properties on :root ─────────────────────
+        var root = document.documentElement;
+        if (dark) {
+            root.style.setProperty('--bg-main',       '#0e1117');
+            root.style.setProperty('--bg-card',       '#1a1f2e');
+            root.style.setProperty('--text-primary',  '#e2e8f0');
+            root.style.setProperty('--text-secondary','#94a3b8');
+            root.style.setProperty('--text-muted',    '#64748b');
+            root.style.setProperty('--border',        'rgba(255,255,255,0.09)');
+            root.style.setProperty('--primary-light', 'rgba(0,82,204,0.20)');
+            root.style.setProperty('--shadow-md',     '0 4px 16px rgba(0,0,0,0.40)');
+            root.style.setProperty('--shadow-lg',     '0 8px 32px rgba(0,0,0,0.55)');
+        } else {
+            root.style.setProperty('--bg-main',       '#f0f4ff');
+            root.style.setProperty('--bg-card',       '#ffffff');
+            root.style.setProperty('--text-primary',  '#0f172a');
+            root.style.setProperty('--text-secondary','#64748b');
+            root.style.setProperty('--text-muted',    '#94a3b8');
+            root.style.setProperty('--border',        '#e2e8f0');
+            root.style.setProperty('--primary-light', '#e8f0fe');
+            root.style.setProperty('--shadow-md',     '0 4px 16px rgba(0,0,0,0.08)');
+            root.style.setProperty('--shadow-lg',     '0 8px 32px rgba(0,0,0,0.10)');
+        }
 
         // ── Color palette ──────────────────────────────────────────
         var C = dark ? {
@@ -646,82 +732,84 @@ def on_stops_change():
     st.session_state.submitted = False
 
 st.markdown('<div class="form-card">', unsafe_allow_html=True)
-with st.container():
 
-    st.markdown('<div class="form-section-title">✈ Section A · Route</div>',
-                unsafe_allow_html=True)
-    col_src, col_arrow, col_dst = st.columns([5, 1, 5])
+# ── Section A · Route ──────────────────────────────────────────────────────
+st.markdown('<div class="form-section-title">✈ Section A · Route</div>',
+            unsafe_allow_html=True)
+col_src, col_arrow, col_dst = st.columns([5, 1, 5])
 
-    source = col_src.selectbox(
-        'Source City', SOURCES,
-        index=SOURCES.index(st.session_state.source),
-        key='_source_sel',
-        on_change=on_source_change
-    )
-    col_arrow.markdown(
-        '<div style="text-align:center;padding-top:28px;'
-        'font-size:1.3rem;color:#0f4c9a">→</div>',
-        unsafe_allow_html=True
-    )
-    valid_dsts  = VALID_DESTINATIONS.get(st.session_state.source, DESTINATIONS)
-    if st.session_state.destination not in valid_dsts:
-        st.session_state.destination = valid_dsts[0]
-    destination = col_dst.selectbox(
-        'Destination City', valid_dsts,
-        index=valid_dsts.index(st.session_state.destination),
-        key='_dst_sel',
-        on_change=on_destination_change
-    )
-    auto_dst = len(valid_dsts) == 1
-    col_dst.markdown(
-        f'<span class="valid-badge">'
-        f'{"✈ Auto-set" if auto_dst else "✅"} '
-        f'{len(valid_dsts)} route(s) from {source}</span>',
-        unsafe_allow_html=True
-    )
+source = col_src.selectbox(
+    'Source City', SOURCES,
+    index=SOURCES.index(st.session_state.source),
+    key='_source_sel',
+    on_change=on_source_change
+)
+col_arrow.markdown(
+    '<div style="text-align:center;padding-top:28px;'
+    'font-size:1.3rem;color:#0f4c9a">→</div>',
+    unsafe_allow_html=True
+)
+valid_dsts  = VALID_DESTINATIONS.get(st.session_state.source, DESTINATIONS)
+if st.session_state.destination not in valid_dsts:
+    st.session_state.destination = valid_dsts[0]
+destination = col_dst.selectbox(
+    'Destination City', valid_dsts,
+    index=valid_dsts.index(st.session_state.destination),
+    key='_dst_sel',
+    on_change=on_destination_change
+)
+auto_dst = len(valid_dsts) == 1
+col_dst.markdown(
+    f'<span class="valid-badge">'
+    f'{"✈ Auto-set" if auto_dst else "✅"} '
+    f'{len(valid_dsts)} route(s) from {source}</span>',
+    unsafe_allow_html=True
+)
 
-    st.markdown('<br>', unsafe_allow_html=True)
+st.markdown('<div style="height:20px"></div>', unsafe_allow_html=True)
 
-    st.markdown('<div class="form-section-title">🛫 Section B · Flight Details</div>',
-                unsafe_allow_html=True)
-    col_al, col_st = st.columns(2)
+# ── Section B · Flight Details ─────────────────────────────────────────────
+st.markdown('<div class="form-section-title">🛫 Section B · Flight Details</div>',
+            unsafe_allow_html=True)
+col_al, col_st = st.columns(2)
 
-    airline = col_al.selectbox(
-        'Airline', AIRLINES,
-        index=AIRLINES.index(st.session_state.airline),
-        key='_airline_sel',
-        on_change=on_airline_change
-    )
-    valid_stops = VALID_AIRLINE_STOPS.get(st.session_state.airline, STOPS)
-    if st.session_state.stops not in valid_stops:
-        st.session_state.stops = valid_stops[0]
-    stops = col_st.selectbox(
-        'Stops', valid_stops,
-        index=valid_stops.index(st.session_state.stops),
-        key='_stops_sel',
-        on_change=on_stops_change
-    )
-    col_st.markdown(
-        f'<span class="valid-badge">'
-        f'{"✈ Auto-set" if len(valid_stops)==1 else "✅"} '
-        f'{len(valid_stops)} stop option(s) for {airline}</span>',
-        unsafe_allow_html=True
-    )
+airline = col_al.selectbox(
+    'Airline', AIRLINES,
+    index=AIRLINES.index(st.session_state.airline),
+    key='_airline_sel',
+    on_change=on_airline_change
+)
+valid_stops = VALID_AIRLINE_STOPS.get(st.session_state.airline, STOPS)
+if st.session_state.stops not in valid_stops:
+    st.session_state.stops = valid_stops[0]
+stops = col_st.selectbox(
+    'Stops', valid_stops,
+    index=valid_stops.index(st.session_state.stops),
+    key='_stops_sel',
+    on_change=on_stops_change
+)
+col_st.markdown(
+    f'<span class="valid-badge">'
+    f'{"✈ Auto-set" if len(valid_stops)==1 else "✅"} '
+    f'{len(valid_stops)} stop option(s) for {airline}</span>',
+    unsafe_allow_html=True
+)
 
-    duration_hrs = predict_duration(destination, destination, stops) \
-        if source == destination \
-        else predict_duration(source, destination, stops)
-    st.markdown(
-        f'<div class="duration-chip">'
-        f'⏱ Auto-predicted Duration: '
-        f'<span class="dur-val">{duration_hrs:.1f}h</span>'
-        f' &nbsp;·&nbsp; Based on real {source} → {destination} / {stops} records'
-        f'</div>',
-        unsafe_allow_html=True
-    )
+duration_hrs = predict_duration(destination, destination, stops) \
+    if source == destination \
+    else predict_duration(source, destination, stops)
+st.markdown(
+    f'<div class="duration-chip">'
+    f'⏱ Auto-predicted Duration: '
+    f'<span class="dur-val">{duration_hrs:.1f}h</span>'
+    f' &nbsp;·&nbsp; Based on real {source} → {destination} / {stops} records'
+    f'</div>',
+    unsafe_allow_html=True
+)
 
-    st.markdown('<br>', unsafe_allow_html=True)
+st.markdown('<div style="height:20px"></div>', unsafe_allow_html=True)
 
+# ── Section C · Journey Details ────────────────────────────────────────────
 st.markdown('<div class="form-section-title">📅 Section C · Journey Details</div>',
             unsafe_allow_html=True)
 
@@ -782,16 +870,12 @@ else:
         _live_icon = '▲' if _live_diff > 0 else '▼'
         _live_col  = '#ef4444' if _live_diff > 0 else '#22c55e'
         st.markdown(
-            f'<div style="background:linear-gradient(90deg,#eff6ff,#dbeafe);'
-            f'border:1.5px solid #bfdbfe;border-radius:10px;'
-            f'padding:12px 20px;display:flex;align-items:center;gap:16px;margin-bottom:4px">'
-            f'<div style="font-size:0.65rem;font-weight:800;color:#3b82f6;'
-            f'text-transform:uppercase;letter-spacing:1.5px">⚡ Live Estimate</div>'
-            f'<div style="font-family:Syne,sans-serif;font-size:1.6rem;'
-            f'font-weight:900;color:#0052cc;letter-spacing:-1px">{sym}{_live_price:,.0f}</div>'
-            f'<div style="font-size:0.78rem;font-weight:600;color:{_live_col}">'
+            f'<div class="live-estimate-card">'
+            f'<div class="live-estimate-label">⚡ Live Estimate</div>'
+            f'<div class="live-estimate-price">{sym}{_live_price:,.0f}</div>'
+            f'<div class="live-estimate-diff" style="color:{_live_col}">'
             f'{_live_icon} {sym}{abs(_live_diff):,.0f} vs dataset avg</div>'
-            f'<div style="font-size:0.72rem;color:#64748b;margin-left:auto">'
+            f'<div class="live-estimate-meta">'
             f'Updates live · {airline} · {source}→{destination} · {stops}'
             f'</div></div>',
             unsafe_allow_html=True
@@ -917,9 +1001,9 @@ if submitted:
                 <div class="stops-label">{stops.upper()}</div>
                 <div class="dash-line"><span class="plane" style="background:var(--bg-card,#fff)">✈️</span></div>
                 <div class="dur">
-                    <span style="color:#1e2b4a;font-weight:600">{duration_hrs}h</span>
+                    <span class="dur-src">{duration_hrs}h</span>
                     &nbsp;·&nbsp;
-                    <span style="color:#0f4c9a;font-weight:600">{dist_str}</span>
+                    <span class="dur-dist">{dist_str}</span>
                 </div>
             </div>
             <div class="ticket-city">
@@ -1226,48 +1310,28 @@ if submitted:
     saving_vs_pick = price_d - cheapest_price
 
     st.markdown(f"""
-    <div style="display:flex;gap:14px;margin-top:8px;flex-wrap:wrap;">
-        <div style="flex:1;min-width:160px;background:#f0fdf4;border:1px solid #bbf7d0;
-                    border-radius:10px;padding:14px 16px;">
-            <div style="font-size:0.65rem;font-weight:800;color:#16a34a;
-                        text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">
-                🏆 Cheapest Option</div>
-            <div style="font-family:'Syne',sans-serif;font-size:1.1rem;
-                        font-weight:900;color:#0f172a">{cheapest_name}</div>
-            <div style="font-size:0.85rem;color:#16a34a;font-weight:700">
-                {sym}{cheapest_price:,.0f}</div>
+    <div class="insight-cards-row">
+        <div class="insight-card green">
+            <div class="insight-card-label green">🏆 Cheapest Option</div>
+            <div class="insight-card-title">{cheapest_name}</div>
+            <div class="insight-card-value green">{sym}{cheapest_price:,.0f}</div>
         </div>
-        <div style="flex:1;min-width:160px;background:#eff6ff;border:1px solid #bfdbfe;
-                    border-radius:10px;padding:14px 16px;">
-            <div style="font-size:0.65rem;font-weight:800;color:#0052cc;
-                        text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">
-                ⭐ Your Selection</div>
-            <div style="font-family:'Syne',sans-serif;font-size:1.1rem;
-                        font-weight:900;color:#0f172a">{airline}</div>
-            <div style="font-size:0.85rem;color:#0052cc;font-weight:700">
-                {sym}{price_d:,.0f}</div>
+        <div class="insight-card blue">
+            <div class="insight-card-label blue">⭐ Your Selection</div>
+            <div class="insight-card-title">{airline}</div>
+            <div class="insight-card-value blue">{sym}{price_d:,.0f}</div>
         </div>
-        <div style="flex:1;min-width:160px;background:#fff7ed;border:1px solid #fed7aa;
-                    border-radius:10px;padding:14px 16px;">
-            <div style="font-size:0.65rem;font-weight:800;color:#ea580c;
-                        text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">
-                💡 Potential Saving</div>
-            <div style="font-family:'Syne',sans-serif;font-size:1.1rem;
-                        font-weight:900;color:#0f172a">
+        <div class="insight-card orange">
+            <div class="insight-card-label orange">💡 Potential Saving</div>
+            <div class="insight-card-title">
                 {f"Switch to {cheapest_name}" if saving_vs_pick > 50 else "Best choice!"}</div>
-            <div style="font-size:0.85rem;color:#ea580c;font-weight:700">
+            <div class="insight-card-value orange">
                 {f"{sym}{saving_vs_pick:,.0f} cheaper" if saving_vs_pick > 50 else "Already cheapest"}</div>
         </div>
-        <div style="flex:1;min-width:160px;background:#fdf4ff;border:1px solid #e9d5ff;
-                    border-radius:10px;padding:14px 16px;">
-            <div style="font-size:0.65rem;font-weight:800;color:#9333ea;
-                        text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">
-                📊 Price Spread</div>
-            <div style="font-family:'Syne',sans-serif;font-size:1.1rem;
-                        font-weight:900;color:#0f172a">
-                {sym}{priciest_price - cheapest_price:,.0f} range</div>
-            <div style="font-size:0.85rem;color:#9333ea;font-weight:700">
-                {cheapest_name} → {priciest_name}</div>
+        <div class="insight-card purple">
+            <div class="insight-card-label purple">📊 Price Spread</div>
+            <div class="insight-card-title">{sym}{priciest_price - cheapest_price:,.0f} range</div>
+            <div class="insight-card-value purple">{cheapest_name} → {priciest_name}</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -1333,24 +1397,18 @@ with st.expander('🔀 Scenario Comparison — Compare up to 3 flight configurat
         for sci, (sc, p_inr, dur) in enumerate(zip(_active, _sc_prices, _sc_durs)):
             p_d  = round(p_inr * fac, 0)
             best = (p_inr == _sc_min)
-            bg   = '#f0fdf4' if best else '#eff6ff'
-            bdr  = '#22c55e' if best else '#bfdbfe'
+            card_cls = 'best' if best else 'default'
             with res_cols[sci]:
                 st.markdown(
-                    f'<div style="background:{bg};border:2px solid {bdr};'
-                    f'border-radius:12px;padding:16px;text-align:center;">'
-                    f'<div style="font-size:0.62rem;font-weight:800;color:#64748b;'
-                    f'text-transform:uppercase;letter-spacing:1px">'
+                    f'<div class="scenario-result-card {card_cls}">'
+                    f'<div class="scenario-result-label">'
                     f'{sc["label"]}{"  🏆" if best else ""}</div>'
-                    f'<div style="font-size:0.82rem;color:#0f172a;font-weight:700;margin:4px 0">'
-                    f'{sc["airline"]}</div>'
-                    f'<div style="font-size:0.7rem;color:#64748b">'
+                    f'<div class="scenario-result-airline">{sc["airline"]}</div>'
+                    f'<div class="scenario-result-detail">'
                     f'{sc["stops"]} · {MONTHS[sc["month"]]} · '
                     f'{WEEKDAYS[sc["weekday"]][:3]} · {sc["dep_hour"]:02d}:00 · {dur:.1f}h</div>'
-                    f'<div style="font-family:Syne,sans-serif;font-size:2rem;'
-                    f'font-weight:900;color:#0052cc;margin:8px 0">{sym}{p_d:,.0f}</div>'
-                    f'<div style="font-size:0.68rem;color:#94a3b8">'
-                    f'{_sc_src} → {_sc_dst} · 1 pax</div>'
+                    f'<div class="scenario-result-price">{sym}{p_d:,.0f}</div>'
+                    f'<div class="scenario-result-route">{_sc_src} → {_sc_dst} · 1 pax</div>'
                     f'</div>', unsafe_allow_html=True
                 )
 
