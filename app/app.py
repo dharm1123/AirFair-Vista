@@ -101,6 +101,8 @@ st.markdown("""
     --text-h:         #0f172a;
     --text-body:      #334155;
     --text-muted:     #64748b;
+    --header-subtext: rgba(255,255,255,0.82);
+    --sidebar-muted:  #94a3b8;
     --page-bg:        #f0f4ff;
     --primary-tint:   #e8f0fe;
 }
@@ -151,7 +153,6 @@ html, body, [class*="css"] {
     letter-spacing: 0.7px !important;
     margin-bottom: 4px !important;
     color: var(--text-h) !important;
-    -webkit-text-fill-color: var(--text-h) !important;
 }
 
 /* ─── SELECTBOX — shape only, let Streamlit own colours ─────────────────── */
@@ -271,7 +272,7 @@ hr {
     letter-spacing: -0.5px;
 }
 .page-header h1 em { color: var(--accent); font-style: normal; }
-.page-header p { color: rgba(255,255,255,0.82); font-size: 0.9rem; margin: 0; }
+.page-header p { color: var(--header-subtext); font-size: 0.9rem; margin: 0; }
 .model-pill {
     display: inline-flex; align-items: center; gap: 5px;
     margin-top: 14px;
@@ -628,7 +629,7 @@ hr {
 
 /* Sidebar component typography helpers */
 .sb-brand    { font-family: 'Syne', sans-serif; font-size: 1.45rem; font-weight: 900; color: #fff; }
-.sb-tagline  { font-size: 0.68rem; color: #94a3b8; letter-spacing: 2px; text-transform: uppercase; margin-top: 2px; }
+.sb-tagline  { font-size: 0.68rem; color: var(--sidebar-muted); letter-spacing: 2px; text-transform: uppercase; margin-top: 2px; }
 .sb-section  {
     font-size: 0.62rem !important; font-weight: 700 !important;
     letter-spacing: 2px !important; text-transform: uppercase !important;
