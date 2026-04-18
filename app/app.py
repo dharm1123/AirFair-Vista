@@ -1401,11 +1401,11 @@ with st.expander('🔀 Scenario Comparison — Compare up to 3 flight configurat
 
     for sci in range(int(n_sc)):
         sc = st.session_state.scenarios[sci]
-            with sc_cols[sci]:
-                st.markdown(
-                    f'<div class="scenario-input-label">{sc["label"]}</div>',
-                    unsafe_allow_html=True
-                )
+        with sc_cols[sci]:
+            st.markdown(
+                f'<div class="scenario-input-label">{sc["label"]}</div>',
+                unsafe_allow_html=True
+            )
             sc['airline']  = st.selectbox('Airline', AIRLINES,
                                            index=AIRLINES.index(sc['airline']),
                                            key=f'_sc_{sci}_al')
