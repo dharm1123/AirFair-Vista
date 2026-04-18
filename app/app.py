@@ -276,6 +276,17 @@ button[kind="primary"]:hover { transform: translateY(-1px) !important; box-shado
 hr { border: none !important; border-top: 1px solid var(--border) !important; margin: 20px 0 !important; }
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+/* ── PLOTLY CHARTS — theme-aware card background ──────────── */
+[data-testid="stPlotlyChart"] > div {
+    background: var(--bg-card) !important;
+    border-radius: var(--radius-md) !important;
+    padding: 6px !important;
+    border: 1px solid var(--border) !important;
+}
+.js-plotly-plot .plotly, .js-plotly-plot .plotly .main-svg {
+    background: transparent !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -932,9 +943,11 @@ if submitted:
         unsafe_allow_html=True
     )
 
-    PLOT_BG    = '#ffffff'
-    GRID_COLOR = '#e8f0fe'
+    PLOT_BG    = 'rgba(0,0,0,0)'          # transparent — CSS card bg shows through
+    GRID_COLOR = 'rgba(148,163,184,0.15)' # subtle grid, visible on both themes
     FONT_FMLY  = 'Plus Jakarta Sans, sans-serif'
+    FONT_CLR   = '#94a3b8'                # neutral mid-gray, readable on both
+    AXIS_LINE  = 'rgba(148,163,184,0.30)'
     PRIMARY    = '#0052cc'
     ACCENT     = '#f5a623'
     SUCCESS    = '#22c55e'
@@ -942,14 +955,14 @@ if submitted:
 
     def base_layout(title, xaxis_title='', yaxis_title=''):
         return dict(
-            title=dict(text=title, font=dict(family=FONT_FMLY, size=14, color='#0f172a'),
+            title=dict(text=title, font=dict(family=FONT_FMLY, size=14, color=FONT_CLR),
                        x=0, xanchor='left', pad=dict(l=4, b=12)),
             paper_bgcolor=PLOT_BG, plot_bgcolor=PLOT_BG,
-            font=dict(family=FONT_FMLY, color='#64748b', size=11),
+            font=dict(family=FONT_FMLY, color=FONT_CLR, size=11),
             xaxis=dict(title=xaxis_title, gridcolor=GRID_COLOR,
-                       linecolor='#e2e8f0', tickfont=dict(size=10)),
+                       linecolor=AXIS_LINE, tickfont=dict(size=10, color=FONT_CLR)),
             yaxis=dict(title=yaxis_title, gridcolor=GRID_COLOR,
-                       linecolor='#e2e8f0', tickfont=dict(size=10), tickprefix=sym),
+                       linecolor=AXIS_LINE, tickfont=dict(size=10, color=FONT_CLR), tickprefix=sym),
             margin=dict(l=10, r=10, t=46, b=10),
             hoverlabel=dict(bgcolor='#0f172a', font_size=12,
                            font_family=FONT_FMLY, font_color='white',
@@ -985,7 +998,7 @@ if submitted:
             x=al_df['Price'], y=al_df['Airline'], orientation='h',
             marker=dict(color=bar_colors, line=dict(width=0)),
             text=al_df['Label'], textposition='outside',
-            textfont=dict(size=10, family=FONT_FMLY, color='#0f172a'),
+            textfont=dict(size=10, family=FONT_FMLY, color=FONT_CLR),
             hovertemplate='<b>%{y}</b><br>Price: ' + sym + '%{x:,.0f}<extra></extra>',
             width=0.65
         ))
@@ -1028,10 +1041,10 @@ if submitted:
             fig2.add_trace(go.Bar(
                 name=cheapest_al, x=STOPS,
                 y=[stops_data[s]['cheapest'] for s in STOPS],
-                marker_color='#e8f0fe',
+                marker_color='rgba(0,82,204,0.25)',
                 text=[f'{sym}{stops_data[s]["cheapest"]:,.0f}' for s in STOPS],
                 textposition='outside',
-                textfont=dict(size=9, family=FONT_FMLY, color='#64748b'),
+                textfont=dict(size=9, family=FONT_FMLY, color=FONT_CLR),
                 hovertemplate='<b>' + cheapest_al + '</b><br>%{x}<br>' + sym + '%{y:,.0f}<extra></extra>',
             ))
         layout2 = base_layout('', xaxis_title='Stops', yaxis_title=f'Price ({sym})')
@@ -1108,7 +1121,7 @@ if submitted:
         fig4.add_trace(go.Scatter(
             x=sc_df[mask_other]['Duration'], y=sc_df[mask_other]['Price'],
             mode='markers', name='Other options',
-            marker=dict(color='#e8f0fe', size=8, line=dict(color='#94a3b8', width=1)),
+            marker=dict(color='rgba(100,116,139,0.35)', size=8, line=dict(color='#94a3b8', width=1)),
             customdata=sc_df[mask_other][['Airline','Stops']].values,
             hovertemplate='<b>%{customdata[0]}</b><br>Stops: %{customdata[1]}<br>'
                           'Duration: %{x:.1f}h<br>Price: ' + sym + '%{y:,.0f}<extra></extra>',
@@ -1313,10 +1326,11 @@ with st.expander('🔀 Scenario Comparison — Compare up to 3 flight configurat
             width=0.5
         ))
         _fig_sc.update_layout(
-            paper_bgcolor='white', plot_bgcolor='white',
-            font=dict(family='Plus Jakarta Sans, sans-serif', color='#64748b'),
-            yaxis=dict(tickprefix=sym, gridcolor='#e8f0fe'),
-            xaxis=dict(tickfont=dict(size=13, family='Syne, sans-serif', color='#0f172a')),
+            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+            font=dict(family='Plus Jakarta Sans, sans-serif', color='#94a3b8'),
+            yaxis=dict(tickprefix=sym, gridcolor='rgba(148,163,184,0.15)',
+                       linecolor='rgba(148,163,184,0.3)', tickfont=dict(color='#94a3b8')),
+            xaxis=dict(tickfont=dict(size=13, family='Syne, sans-serif', color='#94a3b8')),
             margin=dict(l=10,r=10,t=30,b=10), height=260, showlegend=False
         )
         st.plotly_chart(_fig_sc, use_container_width=True, config={'displayModeBar': False})
@@ -1332,4 +1346,3 @@ with st.expander('🔀 Scenario Comparison — Compare up to 3 flight configurat
                     f'**{_cheap_sc["label"]}** ({_cheap_sc["airline"]}, '
                     f'{_cheap_sc["stops"]}) to save **{sym}{_saving:,}** per passenger.'
                 )
-                
