@@ -146,14 +146,21 @@ li[role="option"] { font-size: 0.88rem !important; }
 }
 
 /* ── SIDEBAR (always dark — standalone block) ─────────────────── */
-[data-testid="stSidebar"] {
+[data-testid="stSidebar"],
+[data-testid="stSidebar"] > div,
+[data-testid="stSidebar"] > div > div,
+[data-testid="stSidebar"] section,
+[data-testid="stSidebarContent"] {
     background: var(--bg-sidebar) !important;
+    background-color: var(--bg-sidebar) !important;
+}
+[data-testid="stSidebar"] {
     border-right: 1px solid rgba(255,255,255,0.06) !important;
 }
 [data-testid="stSidebar"] p,
 [data-testid="stSidebar"] label,
 [data-testid="stSidebar"] .stMarkdown,
-[data-testid="stSidebar"] span { color: #cbd5e1 !important; }
+[data-testid="stSidebar"] span { color: #cbd5e1 !important; -webkit-text-fill-color: #cbd5e1 !important; }
 [data-testid="stSidebar"] .stSelectbox label {
     color: #94a3b8 !important;
     -webkit-text-fill-color: #94a3b8 !important;
@@ -187,6 +194,16 @@ li[role="option"] { font-size: 0.88rem !important; }
     color: #93c5fd !important;
     -webkit-text-fill-color: #93c5fd !important;
 }
+/* Fix toggles in sidebar */
+[data-testid="stSidebar"] .stToggle label,
+[data-testid="stSidebar"] [data-testid="stToggleLabel"] {
+    color: #cbd5e1 !important;
+    -webkit-text-fill-color: #cbd5e1 !important;
+}
+/* Fix divider color in sidebar */
+[data-testid="stSidebar"] hr {
+    border-top: 1px solid rgba(255,255,255,0.08) !important;
+}
 
 /* ── SLIDER ─────────────────────────────────────────────────────── */
 .stSlider > div > div > div > div { background: var(--primary) !important; }
@@ -212,17 +229,17 @@ button[kind="primary"]:hover { transform: translateY(-1px) !important; box-shado
 .ticket-header::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--accent), #ff6b35, var(--accent)); }
 .ticket-airline { font-family: 'Syne', sans-serif; color: white; font-size: 0.85rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
 .ticket-tag { background: rgba(245,166,35,0.18); border: 1px solid rgba(245,166,35,0.45); color: var(--accent); border-radius: 20px; padding: 4px 12px; font-size: 0.7rem; font-weight: 700; margin-left: 6px; }
-.ticket-body { padding: 28px 32px; display: flex; align-items: center; background: white; }
+.ticket-body { padding: 28px 32px; display: flex; align-items: center; background: var(--bg-card); }
 .ticket-city { text-align: center; min-width: 100px; flex-shrink: 0; }
 .ticket-city .code { font-family: 'Syne', sans-serif; font-size: 2.6rem; font-weight: 900; color: var(--text-primary); line-height: 1; }
 .ticket-city .name { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 5px; font-weight: 600; }
 .ticket-city .time { font-size: 0.88rem; color: var(--primary); font-weight: 700; margin-top: 8px; }
 .ticket-mid { flex: 1; text-align: center; padding: 0 24px; position: relative; }
-.ticket-mid .stops-label { font-size: 0.65rem; color: var(--accent); font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; display: block; }
-.ticket-mid .dash-line { border-top: 2px dashed #cbd5e1; position: relative; }
-.ticket-mid .plane { position: absolute; top: -13px; left: 50%; transform: translateX(-50%); background: white; padding: 0 10px; font-size: 1.15rem; }
-.ticket-mid .dur { font-size: 0.73rem; color: var(--text-muted); margin-top: 8px; display: block; }
-.ticket-footer { border-top: 2px dashed #e2e8f0; padding: 22px 32px; display: flex; justify-content: space-between; align-items: center; background: #fafbff; }
+.ticket-mid .stops-label { font-size: 0.65rem; color: var(--accent); font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; display: block; }
+.ticket-mid .dash-line { border-top: 2px dashed #cbd5e1; position: relative; height: 24px; display: flex; align-items: center; justify-content: center; }
+.ticket-mid .plane { position: relative; top: auto; left: auto; transform: none; background: white; padding: 0 10px; font-size: 1.15rem; z-index: 1; display: inline-block; margin-top: -12px; }
+.ticket-mid .dur { font-size: 0.73rem; color: var(--text-muted); margin-top: 12px; display: block; }
+.ticket-footer { border-top: 2px dashed #e2e8f0; padding: 22px 32px; display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); }
 .price-label { font-size: 0.62rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px; font-weight: 700; }
 .price-amount { font-family: 'Syne', sans-serif; font-size: 2.8rem; font-weight: 900; color: var(--primary); line-height: 1; }
 .vs-avg-up { color: var(--danger); font-weight: 700; font-size: 0.8rem; margin-top: 5px; display: block; }
@@ -342,6 +359,16 @@ st.markdown("""
                 el.style.setProperty(prop, val, 'important');
             }
         }
+
+        // ── Force sidebar always dark (regardless of light/dark theme) ──
+        var sidebarEls = document.querySelectorAll(
+            '[data-testid="stSidebar"], [data-testid="stSidebar"] > div, ' +
+            '[data-testid="stSidebar"] > div > div, [data-testid="stSidebarContent"]'
+        );
+        sidebarEls.forEach(function(el) {
+            s(el, 'background-color', '#09122c');
+            s(el, 'background', '#09122c');
+        });
 
         // ── Apply to all selectboxes (skip sidebar) ────────────────
         document.querySelectorAll(
@@ -842,7 +869,7 @@ if submitted:
             </div>
             <div class="ticket-mid">
                 <div class="stops-label">{stops.upper()}</div>
-                <div class="dash-line"><span class="plane">✈️</span></div>
+                <div class="dash-line"><span class="plane" style="background:var(--bg-card,#fff)">✈️</span></div>
                 <div class="dur">
                     <span style="color:#1e2b4a;font-weight:600">{duration_hrs}h</span>
                     &nbsp;·&nbsp;
@@ -1305,3 +1332,4 @@ with st.expander('🔀 Scenario Comparison — Compare up to 3 flight configurat
                     f'**{_cheap_sc["label"]}** ({_cheap_sc["airline"]}, '
                     f'{_cheap_sc["stops"]}) to save **{sym}{_saving:,}** per passenger.'
                 )
+                
