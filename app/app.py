@@ -599,6 +599,13 @@ hr {
     background-color: rgba(255,255,255,0.10) !important;
     border: 1px solid rgba(255,255,255,0.20) !important;
     border-radius: 8px !important;
+    color: #e2e8f0 !important;
+    -webkit-text-fill-color: #e2e8f0 !important;
+}
+[data-testid="stSidebar"] div[data-baseweb="select"] > div:first-child * {
+    color: #e2e8f0 !important;
+    -webkit-text-fill-color: #e2e8f0 !important;
+    opacity: 1 !important;
 }
 [data-testid="stSidebar"] div[data-baseweb="select"] [class*="singleValue"],
 [data-testid="stSidebar"] div[data-baseweb="select"] [class*="placeholder"],
@@ -615,6 +622,7 @@ hr {
 [data-testid="stSidebar"] div[data-baseweb="select"] [class*="indicatorsContainer"] svg {
     fill: #cbd5e1 !important;
     color: #cbd5e1 !important;
+    stroke: #cbd5e1 !important;
 }
 [data-testid="stSidebar"] div[data-baseweb="menu"] {
     background: #1e2d50 !important;
