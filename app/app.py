@@ -106,6 +106,7 @@ st.markdown("""
     --sidebar-text:   #e2e8f0;
     --page-bg:        #f0f4ff;
     --primary-tint:   #e8f0fe;
+    --expander-label: #0f172a;
 }
 
 /* ─── DARK MODE TOKENS (Streamlit sets [data-theme="dark"] on <html>) ─────── */
@@ -130,6 +131,7 @@ st.markdown("""
     --text-muted:   #94a3b8 !important;
     --page-bg:      #0e1117 !important;
     --primary-tint: rgba(0,82,204,0.18) !important;
+    --expander-label: #e2e8f0 !important;
 }
 
 /* ─── BASE ───────────────────────────────────────────────────────────────── */
@@ -687,6 +689,20 @@ hr {
     margin-bottom: 8px;
 }
 [data-theme="dark"] .scenario-input-label { color: #93c5fd; }
+
+/* Keep expander summary labels/icons readable in dark-mode contexts. */
+[data-testid="stExpander"] details summary p,
+[data-testid="stExpander"] details summary span {
+    color: var(--expander-label) !important;
+    -webkit-text-fill-color: var(--expander-label) !important;
+    opacity: 1 !important;
+    font-weight: 700 !important;
+}
+[data-testid="stExpander"] details summary svg {
+    fill: var(--expander-label) !important;
+    stroke: var(--expander-label) !important;
+    opacity: 1 !important;
+}
 
 @media (max-width: 960px) {
     /* Hide decorative header glyph on smaller viewports to avoid text overlap. */
