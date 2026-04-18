@@ -101,6 +101,8 @@ st.markdown("""
     --text-h:         #0f172a;
     --text-body:      #334155;
     --text-muted:     #64748b;
+    --header-subtext: rgba(255,255,255,0.82);
+    --sidebar-muted:  #94a3b8;
     --page-bg:        #f0f4ff;
     --primary-tint:   #e8f0fe;
 }
@@ -145,11 +147,12 @@ html, body, [class*="css"] {
 .stRadio > label,
 .stCheckbox > label,
 .stMultiSelect > label {
-    font-size: 0.74rem !important;
+    font-size: 0.78rem !important;
     font-weight: 700 !important;
     text-transform: uppercase !important;
     letter-spacing: 0.7px !important;
     margin-bottom: 4px !important;
+    color: var(--text-h) !important;
 }
 
 /* ─── SELECTBOX — shape only, let Streamlit own colours ─────────────────── */
@@ -166,6 +169,15 @@ div[data-baseweb="menu"] {
     box-shadow: 0 8px 24px rgba(0,82,204,0.14) !important;
 }
 li[role="option"] { font-size: 0.88rem !important; }
+div[data-baseweb="select"] [class*="singleValue"],
+div[data-baseweb="select"] input {
+    color: var(--text-h) !important;
+    -webkit-text-fill-color: var(--text-h) !important;
+}
+div[data-baseweb="select"] [class*="placeholder"] {
+    color: var(--text-muted) !important;
+    -webkit-text-fill-color: var(--text-muted) !important;
+}
 
 /* ─── SLIDER ─────────────────────────────────────────────────────────────── */
 .stSlider > div > div > div > div { background: var(--primary) !important; }
@@ -260,7 +272,7 @@ hr {
     letter-spacing: -0.5px;
 }
 .page-header h1 em { color: var(--accent); font-style: normal; }
-.page-header p { color: rgba(255,255,255,0.52); font-size: 0.88rem; margin: 0; }
+.page-header p { color: var(--header-subtext); font-size: 0.9rem; margin: 0; }
 .model-pill {
     display: inline-flex; align-items: center; gap: 5px;
     margin-top: 14px;
@@ -617,9 +629,9 @@ hr {
 
 /* Sidebar component typography helpers */
 .sb-brand    { font-family: 'Syne', sans-serif; font-size: 1.45rem; font-weight: 900; color: #fff; }
-.sb-tagline  { font-size: 0.65rem; color: #64748b; letter-spacing: 2px; text-transform: uppercase; margin-top: 2px; }
+.sb-tagline  { font-size: 0.68rem; color: var(--sidebar-muted); letter-spacing: 2px; text-transform: uppercase; margin-top: 2px; }
 .sb-section  {
-    font-size: 0.58rem !important; font-weight: 700 !important;
+    font-size: 0.62rem !important; font-weight: 700 !important;
     letter-spacing: 2px !important; text-transform: uppercase !important;
     color: var(--accent) !important;
     margin: 20px 0 10px !important;
