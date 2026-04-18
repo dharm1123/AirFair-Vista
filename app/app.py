@@ -238,6 +238,32 @@ hr {
     margin: 20px 0 !important;
 }
 
+/* ─── EXPANDER (visibility + contrast) ───────────────────────────────────── */
+[data-testid="stExpander"] {
+    border: 1px solid var(--card-border) !important;
+    border-radius: var(--radius-md) !important;
+    overflow: hidden !important;
+    background: var(--card-bg) !important;
+}
+[data-testid="stExpander"] > details > summary {
+    background: var(--primary-tint) !important;
+}
+[data-theme="dark"] [data-testid="stExpander"] > details > summary {
+    background: rgba(59,130,246,0.14) !important;
+}
+[data-testid="stExpander"] > details > summary p,
+[data-testid="stExpander"] > details > summary span {
+    color: var(--text-h) !important;
+    font-weight: 700 !important;
+}
+[data-testid="stExpander"] > details > summary svg {
+    stroke: var(--text-h) !important;
+    fill: var(--text-h) !important;
+}
+[data-testid="stExpander"] [data-testid="stCaptionContainer"] p {
+    color: var(--text-body) !important;
+}
+
 /* ─── SCROLLBAR ──────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
