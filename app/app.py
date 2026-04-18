@@ -103,6 +103,7 @@ st.markdown("""
     --text-muted:     #64748b;
     --header-subtext: rgba(255,255,255,0.82);
     --sidebar-muted:  #94a3b8;
+    --sidebar-text:   #e2e8f0;
     --page-bg:        #f0f4ff;
     --primary-tint:   #e8f0fe;
 }
@@ -599,6 +600,16 @@ hr {
     background-color: rgba(255,255,255,0.10) !important;
     border: 1px solid rgba(255,255,255,0.20) !important;
     border-radius: 8px !important;
+    color: var(--sidebar-text) !important;
+    -webkit-text-fill-color: var(--sidebar-text) !important;
+}
+[data-testid="stSidebar"] div[data-baseweb="select"] > div:first-child span,
+[data-testid="stSidebar"] div[data-baseweb="select"] > div:first-child input,
+[data-testid="stSidebar"] div[data-baseweb="select"] > div:first-child [role="combobox"],
+[data-testid="stSidebar"] div[data-baseweb="select"] > div:first-child [aria-live="polite"] {
+    color: var(--sidebar-text) !important;
+    -webkit-text-fill-color: var(--sidebar-text) !important;
+    opacity: 1 !important;
 }
 [data-testid="stSidebar"] div[data-baseweb="select"] [class*="singleValue"],
 [data-testid="stSidebar"] div[data-baseweb="select"] [class*="placeholder"],
@@ -607,14 +618,15 @@ hr {
 [data-testid="stSidebar"] div[data-baseweb="select"] [class*="inputContainer"],
 [data-testid="stSidebar"] div[data-baseweb="select"] [aria-live="polite"],
 [data-testid="stSidebar"] div[data-baseweb="select"] [role="combobox"] {
-    color: #e2e8f0 !important;
-    -webkit-text-fill-color: #e2e8f0 !important;
+    color: var(--sidebar-text) !important;
+    -webkit-text-fill-color: var(--sidebar-text) !important;
     opacity: 1 !important;
 }
 [data-testid="stSidebar"] div[data-baseweb="select"] [class*="indicatorContainer"] svg,
 [data-testid="stSidebar"] div[data-baseweb="select"] [class*="indicatorsContainer"] svg {
     fill: #cbd5e1 !important;
     color: #cbd5e1 !important;
+    stroke: #cbd5e1 !important;
 }
 [data-testid="stSidebar"] div[data-baseweb="menu"] {
     background: #1e2d50 !important;
