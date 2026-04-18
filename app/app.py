@@ -256,12 +256,13 @@ hr {
 .page-header::before {
     content: '✈';
     position: absolute;
-    right: 36px;
+    right: 24px;
     top: 50%;
     transform: translateY(-50%);
-    font-size: 7rem;
-    opacity: 0.05;
+    font-size: 5.2rem;
+    opacity: 0.035;
     line-height: 1;
+    pointer-events: none;
 }
 .page-header h1 {
     font-family: 'Syne', sans-serif;
@@ -389,6 +390,8 @@ hr {
 [data-theme="dark"] .live-card-price { color: #60a5fa; }
 .live-card-diff { font-size: 0.78rem; font-weight: 600; }
 .live-card-meta { font-size: 0.72rem; color: var(--text-muted); margin-left: auto; }
+[data-theme="dark"] .live-card-label { color: #93c5fd; }
+[data-theme="dark"] .live-card-meta  { color: #cbd5e1; }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    RESULT TICKET
@@ -599,9 +602,19 @@ hr {
 }
 [data-testid="stSidebar"] div[data-baseweb="select"] [class*="singleValue"],
 [data-testid="stSidebar"] div[data-baseweb="select"] [class*="placeholder"],
-[data-testid="stSidebar"] div[data-baseweb="select"] input {
+[data-testid="stSidebar"] div[data-baseweb="select"] input,
+[data-testid="stSidebar"] div[data-baseweb="select"] [class*="valueContainer"],
+[data-testid="stSidebar"] div[data-baseweb="select"] [class*="inputContainer"],
+[data-testid="stSidebar"] div[data-baseweb="select"] [aria-live="polite"],
+[data-testid="stSidebar"] div[data-baseweb="select"] [role="combobox"] {
     color: #e2e8f0 !important;
     -webkit-text-fill-color: #e2e8f0 !important;
+    opacity: 1 !important;
+}
+[data-testid="stSidebar"] div[data-baseweb="select"] [class*="indicatorContainer"] svg,
+[data-testid="stSidebar"] div[data-baseweb="select"] [class*="indicatorsContainer"] svg {
+    fill: #cbd5e1 !important;
+    color: #cbd5e1 !important;
 }
 [data-testid="stSidebar"] div[data-baseweb="select"] svg { fill: #94a3b8 !important; }
 [data-testid="stSidebar"] div[data-baseweb="menu"] {
@@ -617,6 +630,11 @@ hr {
     background: rgba(0,82,204,0.35) !important;
     color: #93c5fd !important;
     -webkit-text-fill-color: #93c5fd !important;
+}
+[data-testid="stSidebar"] li[role="option"][aria-selected="true"] {
+    background: rgba(59,130,246,0.30) !important;
+    color: #eff6ff !important;
+    -webkit-text-fill-color: #eff6ff !important;
 }
 [data-testid="stSidebar"] hr {
     border-top: 1px solid rgba(255,255,255,0.08) !important;
@@ -648,6 +666,20 @@ hr {
 .sb-row .v { color: #e2e8f0; font-weight: 600; }
 .sb-ok  { background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.30); color: #4ade80; border-radius: 8px; padding: 9px 12px; font-size: 0.76rem; font-weight: 600; margin-top: 10px; line-height: 1.5; }
 .sb-err { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.30); color: #f87171; border-radius: 8px; padding: 9px 12px; font-size: 0.76rem; font-weight: 600; margin-top: 10px; }
+
+.scenario-input-label {
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 8px;
+}
+[data-theme="dark"] .scenario-input-label { color: #93c5fd; }
+
+@media (max-width: 960px) {
+    .page-header::before { display: none; }
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -1369,13 +1401,11 @@ with st.expander('🔀 Scenario Comparison — Compare up to 3 flight configurat
 
     for sci in range(int(n_sc)):
         sc = st.session_state.scenarios[sci]
-        with sc_cols[sci]:
-            st.markdown(
-                f'<div style="font-size:0.65rem;font-weight:800;color:#0052cc;'
-                f'text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px">'
-                f'{sc["label"]}</div>',
-                unsafe_allow_html=True
-            )
+            with sc_cols[sci]:
+                st.markdown(
+                    f'<div class="scenario-input-label">{sc["label"]}</div>',
+                    unsafe_allow_html=True
+                )
             sc['airline']  = st.selectbox('Airline', AIRLINES,
                                            index=AIRLINES.index(sc['airline']),
                                            key=f'_sc_{sci}_al')
