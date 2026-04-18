@@ -124,7 +124,7 @@ div[data-baseweb="menu"] {
 }
 li[role="option"] { font-size: 0.88rem !important; }
 
-/* ── LABELS — styled but color set by JS ──────────────────────── */
+/* ── LABELS — CSS fallback for all widget label types ─────── */
 .stSelectbox label {
     font-size: 0.78rem !important;
     font-weight: 700 !important;
@@ -143,6 +143,22 @@ li[role="option"] { font-size: 0.88rem !important; }
     font-weight: 600 !important;
     text-transform: uppercase !important;
     letter-spacing: 0.5px !important;
+}
+/* Radio & checkbox labels */
+.stRadio label, .stRadio > label,
+.stCheckbox label,
+[data-testid="stRadioGroup"] label {
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+}
+/* Streamlit modern widget label wrapper */
+[data-testid="stWidgetLabel"],
+[data-testid="stWidgetLabel"] > div,
+[data-testid="stWidgetLabel"] p {
+    font-size: 0.78rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.6px !important;
 }
 
 /* ── SIDEBAR (always dark — standalone block) ─────────────────── */
@@ -442,10 +458,29 @@ st.markdown("""
             });
         });
 
-        // ── Labels ────────────────────────────────────────────────
+        // ── Labels (all widget types) ──────────────────────────────
         document.querySelectorAll(
             '.stSelectbox label, .stSlider label, ' +
-            '[data-testid="stDateInput"] label, .stNumberInput label'
+            '[data-testid="stDateInput"] label, .stNumberInput label, ' +
+            '.stRadio label, .stRadio > label, ' +
+            '[data-testid="stWidgetLabel"], [data-testid="stWidgetLabel"] > div, ' +
+            '[data-testid="stWidgetLabel"] p, ' +
+            '.stRadio [data-testid="stMarkdownContainer"] p, ' +
+            '[data-testid="stExpander"] label, ' +
+            '.stCheckbox label, .stMultiSelect label'
+        ).forEach(function(el) {
+            if (el.closest('[data-testid="stSidebar"]')) return;
+            s(el, 'color', C.labelColor);
+            s(el, '-webkit-text-fill-color', C.labelColor);
+        });
+
+        // ── Slider tick/range labels ───────────────────────────────
+        document.querySelectorAll(
+            '[data-testid="stSlider"] [class*="tickBarMin"], ' +
+            '[data-testid="stSlider"] [class*="tickBarMax"], ' +
+            '[data-testid="stSlider"] [data-testid="stTickBarMin"], ' +
+            '[data-testid="stSlider"] [data-testid="stTickBarMax"], ' +
+            '[data-testid="stSlider"] span'
         ).forEach(function(el) {
             if (el.closest('[data-testid="stSidebar"]')) return;
             s(el, 'color', C.labelColor);
@@ -992,7 +1027,7 @@ if submitted:
                     'text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">'
                     '🏷️ All Airlines · Ranked by Price</div>', unsafe_allow_html=True)
         bar_colors = [PRIMARY if a == airline else
-                      ('#e8f0fe' if al_prices[a] < price_d else '#fee2e2')
+                      ('rgba(0,82,204,0.25)' if al_prices[a] < price_d else 'rgba(239,68,68,0.25)')
                       for a in al_df['Airline']]
         fig1 = go.Figure(go.Bar(
             x=al_df['Price'], y=al_df['Airline'], orientation='h',
@@ -1008,8 +1043,11 @@ if submitted:
                        annotation_position='top right')
         layout1 = base_layout('', xaxis_title=f'Price ({sym})')
         layout1['yaxis']['title'] = ''
-        layout1['margin'] = dict(l=10, r=80, t=10, b=10)
+        layout1['margin'] = dict(l=10, r=120, t=10, b=10)
         layout1['height'] = 340
+        # Pad x-axis so outside text labels have room
+        _max_price = al_df['Price'].max()
+        layout1['xaxis']['range'] = [0, _max_price * 1.28]
         fig1.update_layout(**layout1)
         st.plotly_chart(fig1, use_container_width=True, config={'displayModeBar': False})
 
