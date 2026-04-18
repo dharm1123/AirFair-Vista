@@ -248,9 +248,6 @@ hr {
 [data-testid="stExpander"] > details > summary {
     background: var(--primary-tint) !important;
 }
-[data-theme="dark"] [data-testid="stExpander"] > details > summary {
-    background: rgba(59,130,246,0.14) !important;
-}
 [data-testid="stExpander"] > details > summary p,
 [data-testid="stExpander"] > details > summary span {
     color: var(--text-h) !important;
