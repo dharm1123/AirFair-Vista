@@ -1,0 +1,20 @@
+[theme]
+# ── AirFair Vista — locked light theme ────────────────────────────────────
+# Forcing a single theme is the MOST RELIABLE way to guarantee consistent
+# colours in Streamlit, regardless of user OS preference or Streamlit version.
+#
+# This removes all light/dark ambiguity so your custom CSS always knows
+# exactly what background colour it is sitting on.
+
+base                  = "light"
+
+# Page & widget backgrounds
+backgroundColor       = "#f0f4ff"   # --bg-main  : soft blue-white page
+secondaryBackgroundColor = "#ffffff" # --bg-card  : white cards / sidebar inputs
+
+# Text
+textColor             = "#0f172a"   # --text-primary : dark navy for readability
+primaryColor          = "#0052cc"   # --primary      : AirFair blue (buttons, sliders, links)
+
+# Font (Streamlit will load this from Google Fonts)
+font                  = "sans serif"
