@@ -616,7 +616,6 @@ hr {
     fill: #cbd5e1 !important;
     color: #cbd5e1 !important;
 }
-[data-testid="stSidebar"] div[data-baseweb="select"] svg { fill: #94a3b8 !important; }
 [data-testid="stSidebar"] div[data-baseweb="menu"] {
     background: #1e2d50 !important;
     border: 1px solid rgba(255,255,255,0.15) !important;
@@ -678,6 +677,7 @@ hr {
 [data-theme="dark"] .scenario-input-label { color: #93c5fd; }
 
 @media (max-width: 960px) {
+    /* Hide decorative header glyph on smaller viewports to avoid text overlap. */
     .page-header::before { display: none; }
 }
 </style>
