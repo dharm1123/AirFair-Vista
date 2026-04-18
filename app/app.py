@@ -74,11 +74,13 @@ def batch_predict_app(combos: list, passengers: int = 1) -> list:
 # ─────────────────────────────────────────────────────────────────────────────
 #  MASTER CSS  — theme-aware, works in both Light and Dark mode
 # ─────────────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+#  STYLES  — theme-aware CSS + JS runtime patcher
+# ─────────────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Syne:wght@700;800;900&display=swap');
 
-/* ── CSS VARIABLES ─────────────────────────────────────────────── */
 :root {
     --primary: #0052cc;
     --primary-dark: #003a99;
@@ -101,218 +103,49 @@ st.markdown("""
     --radius-xl: 24px;
 }
 
-/* ── GLOBAL ─────────────────────────────────────────────────────── */
 html, body, [class*="css"] {
     font-family: 'Plus Jakarta Sans', sans-serif !important;
 }
 .stApp { background: var(--bg-main); }
 
-/* ══════════════════════════════════════════════════════════════════
-   SELECTBOX — COMPLETE THEME-AWARE FIX
-   Strategy: Light mode = white bg + dark text
-             Dark mode  = use Streamlit's own dark variables
-   ══════════════════════════════════════════════════════════════════ */
-
-/* LIGHT MODE: force clean white box with visible dark text */
-[data-testid="stAppViewContainer"] div[data-baseweb="select"] > div:first-child {
-    background-color: #ffffff !important;
-    border: 1.5px solid #c8d6f0 !important;
+/* ── SELECTBOX: border/radius only — NO background forcing ─────── */
+/* Background is handled entirely by JS to avoid light/dark conflicts */
+div[data-baseweb="select"] > div:first-child {
     border-radius: 8px !important;
     min-height: 42px !important;
+    transition: border-color 0.15s ease !important;
 }
-[data-testid="stAppViewContainer"] div[data-baseweb="select"] > div:first-child:hover {
-    border-color: #0052cc !important;
+div[data-baseweb="select"] > div:first-child:hover {
     box-shadow: 0 0 0 3px rgba(0,82,204,0.12) !important;
 }
-/* Force visible text - the critical -webkit-text-fill-color override */
-[data-testid="stAppViewContainer"] div[data-baseweb="select"] [class*="singleValue"],
-[data-testid="stAppViewContainer"] div[data-baseweb="select"] [class*="placeholder"] {
-    color: #111827 !important;
-    -webkit-text-fill-color: #111827 !important;
-}
-[data-testid="stAppViewContainer"] div[data-baseweb="select"] input {
-    color: #111827 !important;
-    -webkit-text-fill-color: #111827 !important;
-    caret-color: #0052cc !important;
-}
-[data-testid="stAppViewContainer"] div[data-baseweb="select"] svg { fill: #64748b !important; }
-
-/* Dropdown open list — light */
-[data-testid="stAppViewContainer"] div[data-baseweb="menu"] {
-    background: #ffffff !important;
-    border: 1.5px solid #c8d6f0 !important;
+div[data-baseweb="menu"] {
     border-radius: 8px !important;
     box-shadow: 0 8px 24px rgba(0,82,204,0.14) !important;
 }
-[data-testid="stAppViewContainer"] li[role="option"],
-[data-testid="stAppViewContainer"] div[data-baseweb="menu"] li {
-    color: #111827 !important;
-    background: #ffffff !important;
-    -webkit-text-fill-color: #111827 !important;
-    font-size: 0.88rem !important;
-}
-[data-testid="stAppViewContainer"] li[role="option"]:hover {
-    background: #e8f0fe !important;
-    color: #0052cc !important;
-    -webkit-text-fill-color: #0052cc !important;
-}
-[data-testid="stAppViewContainer"] li[aria-selected="true"] {
-    background: #dce9ff !important;
-    color: #0052cc !important;
-    -webkit-text-fill-color: #0052cc !important;
-    font-weight: 600 !important;
-}
+li[role="option"] { font-size: 0.88rem !important; }
 
-/* ── LABELS — LIGHT MODE: visible medium grey ───────────────────── */
-[data-testid="stAppViewContainer"] .stSelectbox label {
+/* ── LABELS — styled but color set by JS ──────────────────────── */
+.stSelectbox label {
     font-size: 0.78rem !important;
     font-weight: 700 !important;
-    color: #374151 !important;
-    -webkit-text-fill-color: #374151 !important;
     text-transform: uppercase !important;
     letter-spacing: 0.8px !important;
     margin-bottom: 4px !important;
 }
-[data-testid="stAppViewContainer"] .stSlider label {
+.stSlider label {
     font-size: 0.78rem !important;
     font-weight: 600 !important;
-    color: #374151 !important;
-    -webkit-text-fill-color: #374151 !important;
     text-transform: uppercase !important;
     letter-spacing: 0.5px !important;
 }
-[data-testid="stAppViewContainer"] [data-testid="stDateInput"] label {
+[data-testid="stDateInput"] label {
     font-size: 0.78rem !important;
     font-weight: 600 !important;
-    color: #374151 !important;
-    -webkit-text-fill-color: #374151 !important;
     text-transform: uppercase !important;
     letter-spacing: 0.5px !important;
 }
-[data-testid="stAppViewContainer"] .stNumberInput label {
-    font-size: 0.78rem !important;
-    font-weight: 600 !important;
-    color: #374151 !important;
-    -webkit-text-fill-color: #374151 !important;
-}
 
-/* ── INPUTS ─────────────────────────────────────────────────────── */
-[data-testid="stAppViewContainer"] [data-testid="stDateInput"] input,
-[data-testid="stAppViewContainer"] .stNumberInput input {
-    background: #ffffff !important;
-    border: 1.5px solid #c8d6f0 !important;
-    border-radius: 8px !important;
-    color: #111827 !important;
-    -webkit-text-fill-color: #111827 !important;
-}
-
-/* ══════════════════════════════════════════════════════════════════
-   DARK MODE OVERRIDES
-   Streamlit dark mode: --default-backgroundColor = #0e1117
-   We detect it via the .st-dark class on the root element
-   ══════════════════════════════════════════════════════════════════ */
-
-/* Method 1: Streamlit adds st-dark class to html in dark mode */
-.st-dark [data-testid="stAppViewContainer"] div[data-baseweb="select"] > div:first-child,
-[data-theme="dark"] div[data-baseweb="select"] > div:first-child {
-    background-color: #1e2130 !important;
-    border: 1.5px solid rgba(255,255,255,0.18) !important;
-}
-.st-dark [data-testid="stAppViewContainer"] div[data-baseweb="select"] [class*="singleValue"],
-.st-dark [data-testid="stAppViewContainer"] div[data-baseweb="select"] [class*="placeholder"],
-[data-theme="dark"] div[data-baseweb="select"] [class*="singleValue"],
-[data-theme="dark"] div[data-baseweb="select"] [class*="placeholder"] {
-    color: #e2e8f0 !important;
-    -webkit-text-fill-color: #e2e8f0 !important;
-}
-.st-dark [data-testid="stAppViewContainer"] div[data-baseweb="select"] input,
-[data-theme="dark"] div[data-baseweb="select"] input {
-    color: #e2e8f0 !important;
-    -webkit-text-fill-color: #e2e8f0 !important;
-}
-.st-dark [data-testid="stAppViewContainer"] div[data-baseweb="select"] svg,
-[data-theme="dark"] div[data-baseweb="select"] svg { fill: #94a3b8 !important; }
-.st-dark [data-testid="stAppViewContainer"] div[data-baseweb="menu"],
-[data-theme="dark"] div[data-baseweb="menu"] {
-    background: #1e2130 !important;
-    border: 1px solid rgba(255,255,255,0.15) !important;
-}
-.st-dark [data-testid="stAppViewContainer"] li[role="option"],
-.st-dark [data-testid="stAppViewContainer"] div[data-baseweb="menu"] li,
-[data-theme="dark"] li[role="option"] {
-    color: #e2e8f0 !important;
-    background: #1e2130 !important;
-    -webkit-text-fill-color: #e2e8f0 !important;
-}
-.st-dark [data-testid="stAppViewContainer"] li[role="option"]:hover,
-[data-theme="dark"] li[role="option"]:hover {
-    background: #2d3a5e !important;
-    color: #93c5fd !important;
-    -webkit-text-fill-color: #93c5fd !important;
-}
-
-/* Dark mode LABELS — bright enough to contrast on #0e1117 */
-.st-dark [data-testid="stAppViewContainer"] .stSelectbox label,
-[data-theme="dark"] .stSelectbox label {
-    color: #94a3b8 !important;
-    -webkit-text-fill-color: #94a3b8 !important;
-}
-.st-dark [data-testid="stAppViewContainer"] .stSlider label,
-[data-theme="dark"] .stSlider label {
-    color: #94a3b8 !important;
-    -webkit-text-fill-color: #94a3b8 !important;
-}
-.st-dark [data-testid="stAppViewContainer"] [data-testid="stDateInput"] label,
-[data-theme="dark"] [data-testid="stDateInput"] label {
-    color: #94a3b8 !important;
-    -webkit-text-fill-color: #94a3b8 !important;
-}
-.st-dark [data-testid="stAppViewContainer"] .stNumberInput label,
-[data-theme="dark"] .stNumberInput label {
-    color: #94a3b8 !important;
-    -webkit-text-fill-color: #94a3b8 !important;
-}
-/* Dark mode inputs */
-.st-dark [data-testid="stAppViewContainer"] [data-testid="stDateInput"] input,
-.st-dark [data-testid="stAppViewContainer"] .stNumberInput input,
-[data-theme="dark"] [data-testid="stDateInput"] input,
-[data-theme="dark"] .stNumberInput input {
-    background: #1e2130 !important;
-    border: 1.5px solid rgba(255,255,255,0.18) !important;
-    color: #e2e8f0 !important;
-    -webkit-text-fill-color: #e2e8f0 !important;
-}
-
-/* Method 2: media query as additional fallback */
-@media (prefers-color-scheme: dark) {
-    div[data-baseweb="select"] > div:first-child {
-        background-color: #1e2130 !important;
-        border-color: rgba(255,255,255,0.18) !important;
-    }
-    div[data-baseweb="select"] [class*="singleValue"],
-    div[data-baseweb="select"] [class*="placeholder"],
-    div[data-baseweb="select"] input {
-        color: #e2e8f0 !important;
-        -webkit-text-fill-color: #e2e8f0 !important;
-    }
-    div[data-baseweb="menu"] {
-        background: #1e2130 !important;
-    }
-    li[role="option"] {
-        color: #e2e8f0 !important;
-        background: #1e2130 !important;
-        -webkit-text-fill-color: #e2e8f0 !important;
-    }
-    .stSelectbox label,
-    .stSlider label,
-    [data-testid="stDateInput"] label,
-    .stNumberInput label {
-        color: #94a3b8 !important;
-        -webkit-text-fill-color: #94a3b8 !important;
-    }
-}
-
-/* ── SIDEBAR (always dark) ──────────────────────────────────────── */
+/* ── SIDEBAR (always dark — standalone block) ─────────────────── */
 [data-testid="stSidebar"] {
     background: var(--bg-sidebar) !important;
     border-right: 1px solid rgba(255,255,255,0.06) !important;
@@ -325,7 +158,6 @@ html, body, [class*="css"] {
     color: #94a3b8 !important;
     -webkit-text-fill-color: #94a3b8 !important;
     font-size: 0.72rem !important;
-    font-weight: 600 !important;
     text-transform: uppercase !important;
     letter-spacing: 0.5px !important;
 }
@@ -362,81 +194,22 @@ html, body, [class*="css"] {
 /* ── PAGE HEADER ─────────────────────────────────────────────────── */
 .page-header {
     background: linear-gradient(135deg, #09122c 0%, #0d1f5c 40%, #0052cc 100%);
-    border-radius: var(--radius-xl);
-    padding: 36px 40px 32px;
-    margin-bottom: 28px;
-    position: relative;
-    overflow: hidden;
+    border-radius: var(--radius-xl); padding: 36px 40px 32px;
+    margin-bottom: 28px; position: relative; overflow: hidden;
     box-shadow: 0 8px 32px rgba(0,82,204,0.25);
 }
-.page-header h1 {
-    font-family: 'Syne', sans-serif;
-    font-size: 2.1rem;
-    font-weight: 900;
-    margin: 0 0 6px;
-    color: #fff;
-    letter-spacing: -0.5px;
-}
+.page-header h1 { font-family: 'Syne', sans-serif; font-size: 2.1rem; font-weight: 900; margin: 0 0 6px; color: #fff; letter-spacing: -0.5px; }
 .page-header h1 em { color: var(--accent); font-style: normal; }
 .page-header p { color: rgba(255,255,255,0.55); font-size: 0.88rem; margin: 0; }
-.model-pill {
-    display: inline-flex; align-items: center; gap: 5px; margin-top: 14px;
-    background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.4);
-    color: #4ade80; border-radius: 20px; padding: 4px 14px;
-    font-size: 0.72rem; font-weight: 700;
-}
-.model-pill-warn {
-    display: inline-flex; align-items: center; gap: 5px; margin-top: 14px;
-    background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.4);
-    color: #fbbf24; border-radius: 20px; padding: 4px 14px;
-    font-size: 0.72rem; font-weight: 700;
-}
-
-/* ── FORM CARD ───────────────────────────────────────────────────── */
-.form-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    padding: 28px 32px 20px;
-    box-shadow: var(--shadow-md);
-    margin-bottom: 24px;
-}
-.form-section-title {
-    font-size: 0.62rem; font-weight: 800; letter-spacing: 2px;
-    text-transform: uppercase; color: var(--primary);
-    margin-bottom: 16px; padding-bottom: 8px;
-    border-bottom: 2px solid var(--primary-light);
-    display: flex; align-items: center; gap: 6px;
-}
-
-/* ── PREDICT BUTTON ─────────────────────────────────────────────── */
-button[kind="primary"] {
-    background: linear-gradient(90deg, var(--primary), var(--primary-dark)) !important;
-    color: white !important; font-family: 'Syne', sans-serif !important;
-    font-weight: 700 !important; font-size: 1rem !important;
-    border-radius: var(--radius-md) !important; border: none !important;
-    padding: 15px 28px !important;
-}
-button[kind="primary"]:hover {
-    transform: translateY(-1px) !important;
-    box-shadow: 0 8px 24px rgba(0,82,204,0.35) !important;
-}
-
-/* ── RESULT TICKET ──────────────────────────────────────────────── */
-.result-ticket {
-    background: var(--bg-card); border-radius: var(--radius-xl);
-    border: 1px solid var(--border); overflow: hidden;
-    box-shadow: var(--shadow-lg); margin-bottom: 24px;
-}
-.ticket-header {
-    background: linear-gradient(135deg, #09122c 0%, #0d1f5c 50%, #0052cc 100%);
-    padding: 20px 28px; display: flex; justify-content: space-between;
-    align-items: center; position: relative; overflow: hidden;
-}
-.ticket-header::after {
-    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg, var(--accent), #ff6b35, var(--accent));
-}
+.model-pill { display: inline-flex; align-items: center; gap: 5px; margin-top: 14px; background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.4); color: #4ade80; border-radius: 20px; padding: 4px 14px; font-size: 0.72rem; font-weight: 700; }
+.model-pill-warn { display: inline-flex; align-items: center; gap: 5px; margin-top: 14px; background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.4); color: #fbbf24; border-radius: 20px; padding: 4px 14px; font-size: 0.72rem; font-weight: 700; }
+.form-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px 32px 20px; box-shadow: var(--shadow-md); margin-bottom: 24px; }
+.form-section-title { font-size: 0.62rem; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--primary); margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--primary-light); display: flex; align-items: center; gap: 6px; }
+button[kind="primary"] { background: linear-gradient(90deg, var(--primary), var(--primary-dark)) !important; color: white !important; font-family: 'Syne', sans-serif !important; font-weight: 700 !important; font-size: 1rem !important; border-radius: var(--radius-md) !important; border: none !important; padding: 15px 28px !important; }
+button[kind="primary"]:hover { transform: translateY(-1px) !important; box-shadow: 0 8px 24px rgba(0,82,204,0.35) !important; }
+.result-ticket { background: var(--bg-card); border-radius: var(--radius-xl); border: 1px solid var(--border); overflow: hidden; box-shadow: var(--shadow-lg); margin-bottom: 24px; }
+.ticket-header { background: linear-gradient(135deg, #09122c 0%, #0d1f5c 50%, #0052cc 100%); padding: 20px 28px; display: flex; justify-content: space-between; align-items: center; position: relative; overflow: hidden; }
+.ticket-header::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--accent), #ff6b35, var(--accent)); }
 .ticket-airline { font-family: 'Syne', sans-serif; color: white; font-size: 0.85rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
 .ticket-tag { background: rgba(245,166,35,0.18); border: 1px solid rgba(245,166,35,0.45); color: var(--accent); border-radius: 20px; padding: 4px 12px; font-size: 0.7rem; font-weight: 700; margin-left: 6px; }
 .ticket-body { padding: 28px 32px; display: flex; align-items: center; background: white; }
@@ -490,124 +263,193 @@ hr { border: none !important; border-top: 1px solid var(--border) !important; ma
 """, unsafe_allow_html=True)
 
 
-# ── JavaScript: Runtime theme detector ───────────────────────────────────────
-# Detects actual Streamlit theme at runtime and applies correct colors
-# Runs on every DOM mutation (Streamlit re-render) via MutationObserver
+# ─────────────────────────────────────────────────────────────────────────────
+#  JAVASCRIPT — Runtime theme detector & color patcher
+#  This is the ONLY place that sets selectbox colors.
+#  Detects real theme by reading actual background color from DOM.
+#  Runs every 300ms so it catches theme toggles instantly.
+# ─────────────────────────────────────────────────────────────────────────────
 st.markdown("""
 <script>
 (function() {
-    function getTheme() {
-        // Method 1: Check Streamlit's stored theme
-        try {
-            const stored = localStorage.getItem('stActiveTheme');
-            if (stored) {
-                const t = JSON.parse(stored);
-                if (t && t.base) return t.base;
-            }
-        } catch(e) {}
-        // Method 2: Check background color brightness
-        const el = document.querySelector('[data-testid="stAppViewContainer"]') || document.body;
-        const bg = window.getComputedStyle(el).backgroundColor;
-        const m = bg.match(/\\d+/g);
-        if (m && m.length >= 3) {
-            const lum = (parseInt(m[0]) * 299 + parseInt(m[1]) * 587 + parseInt(m[2]) * 114) / 1000;
-            return lum < 128 ? 'dark' : 'light';
+    'use strict';
+
+    // Detect current theme by reading actual background luminance
+    function isDarkMode() {
+        const targets = [
+            '[data-testid="stAppViewContainer"]',
+            '.stApp',
+            'body'
+        ];
+        for (const sel of targets) {
+            const el = document.querySelector(sel);
+            if (!el) continue;
+            const bg = window.getComputedStyle(el).backgroundColor;
+            const nums = bg.match(/\d+/g);
+            if (!nums || nums.length < 3) continue;
+            const lum = (parseInt(nums[0]) * 299 +
+                         parseInt(nums[1]) * 587 +
+                         parseInt(nums[2]) * 114) / 1000;
+            if (lum < 180) return true;  // dark
+            if (lum >= 180) return false; // light
         }
-        return 'light';
+        return false; // default light
     }
 
-    function applyTheme() {
-        const isDark = getTheme() === 'dark';
+    var lastTheme = null;
 
-        const LIGHT = {
-            selectBg: '#ffffff',
-            selectBorder: '1.5px solid #c8d6f0',
-            valueColor: '#111827',
-            menuBg: '#ffffff',
-            menuItemColor: '#111827',
-            labelColor: '#374151',
-            inputBg: '#ffffff',
+    function applyColors() {
+        var dark = isDarkMode();
+        var themeKey = dark ? 'dark' : 'light';
+
+        // Only re-apply if theme changed (or elements are new)
+        var forceUpdate = (themeKey !== lastTheme);
+        lastTheme = themeKey;
+
+        // ── Color palette ──────────────────────────────────────────
+        var C = dark ? {
+            selectBg:    '#1e2130',
+            selectBorder:'1.5px solid rgba(255,255,255,0.20)',
+            text:        'rgba(250,250,250,0.87)',
+            textFill:    'rgba(250,250,250,0.87)',
+            menuBg:      '#1e2130',
+            menuBorder:  '1px solid rgba(255,255,255,0.15)',
+            menuItem:    'rgba(250,250,250,0.87)',
+            menuItemHov: '#2d3a5e',
+            menuTextHov: '#93c5fd',
+            arrow:       '#94a3b8',
+            labelColor:  '#94a3b8',
+            inputBg:     '#1e2130',
+            inputBorder: '1.5px solid rgba(255,255,255,0.20)'
+        } : {
+            selectBg:    '#ffffff',
+            selectBorder:'1.5px solid #c8d6f0',
+            text:        '#111827',
+            textFill:    '#111827',
+            menuBg:      '#ffffff',
+            menuBorder:  '1.5px solid #c8d6f0',
+            menuItem:    '#111827',
+            menuItemHov: '#e8f0fe',
+            menuTextHov: '#0052cc',
+            arrow:       '#64748b',
+            labelColor:  '#374151',
+            inputBg:     '#ffffff',
+            inputBorder: '1.5px solid #c8d6f0'
         };
-        const DARK = {
-            selectBg: '#1e2130',
-            selectBorder: '1.5px solid rgba(255,255,255,0.18)',
-            valueColor: 'rgba(250,250,250,0.87)',
-            menuBg: '#1e2130',
-            menuItemColor: 'rgba(250,250,250,0.87)',
-            labelColor: '#94a3b8',
-            inputBg: '#1e2130',
-        };
-        const T = isDark ? DARK : LIGHT;
 
-        const set = (el, prop, val) => el.style.setProperty(prop, val, 'important');
-
-        // Apply to all selectboxes NOT in sidebar
-        document.querySelectorAll('div[data-baseweb="select"]').forEach(sel => {
-            if (sel.closest('[data-testid="stSidebar"]')) return;
-            const box = sel.querySelector(':scope > div:first-child');
-            if (box) {
-                set(box, 'background-color', T.selectBg);
-                set(box, 'border', T.selectBorder);
+        function s(el, prop, val) {
+            if (el.style.getPropertyValue(prop) !== val || forceUpdate) {
+                el.style.setProperty(prop, val, 'important');
             }
-            sel.querySelectorAll('[class*="singleValue"],[class*="placeholder"]').forEach(el => {
-                set(el, 'color', T.valueColor);
-                set(el, '-webkit-text-fill-color', T.valueColor);
+        }
+
+        // ── Apply to all selectboxes (skip sidebar) ────────────────
+        document.querySelectorAll(
+            'div[data-baseweb="select"]'
+        ).forEach(function(sel) {
+            if (sel.closest('[data-testid="stSidebar"]')) return;
+
+            // Container box
+            var box = sel.querySelector(':scope > div:first-child');
+            if (box) {
+                s(box, 'background-color', C.selectBg);
+                s(box, 'border', C.selectBorder);
+            }
+
+            // Selected value text
+            sel.querySelectorAll(
+                '[class*="singleValue"],[class*="placeholder"]'
+            ).forEach(function(el) {
+                s(el, 'color', C.text);
+                s(el, '-webkit-text-fill-color', C.textFill);
             });
-            sel.querySelectorAll('input').forEach(el => {
-                set(el, 'color', T.valueColor);
-                set(el, '-webkit-text-fill-color', T.valueColor);
+
+            // Input inside select
+            sel.querySelectorAll('input').forEach(function(el) {
+                s(el, 'color', C.text);
+                s(el, '-webkit-text-fill-color', C.textFill);
+                s(el, 'background-color', C.selectBg);
+            });
+
+            // Arrow SVG
+            sel.querySelectorAll('svg').forEach(function(el) {
+                s(el, 'fill', C.arrow);
             });
         });
 
-        // Dropdown menus
-        document.querySelectorAll('div[data-baseweb="menu"]').forEach(menu => {
+        // ── Dropdown open menus ────────────────────────────────────
+        document.querySelectorAll(
+            'div[data-baseweb="menu"]'
+        ).forEach(function(menu) {
             if (menu.closest('[data-testid="stSidebar"]')) return;
-            set(menu, 'background-color', T.menuBg);
-            menu.querySelectorAll('li[role="option"]').forEach(li => {
-                set(li, 'color', T.menuItemColor);
-                set(li, 'background-color', T.menuBg);
-                set(li, '-webkit-text-fill-color', T.menuItemColor);
+            s(menu, 'background-color', C.menuBg);
+            s(menu, 'border', C.menuBorder);
+
+            menu.querySelectorAll(
+                'li[role="option"]'
+            ).forEach(function(li) {
+                s(li, 'color', C.menuItem);
+                s(li, '-webkit-text-fill-color', C.menuItem);
+                s(li, 'background-color', C.menuBg);
+                li.addEventListener('mouseenter', function() {
+                    this.style.setProperty('background-color', C.menuItemHov, 'important');
+                    this.style.setProperty('color', C.menuTextHov, 'important');
+                    this.style.setProperty('-webkit-text-fill-color', C.menuTextHov, 'important');
+                });
+                li.addEventListener('mouseleave', function() {
+                    this.style.setProperty('background-color', C.menuBg, 'important');
+                    this.style.setProperty('color', C.menuItem, 'important');
+                    this.style.setProperty('-webkit-text-fill-color', C.menuItem, 'important');
+                });
             });
         });
 
-        // Labels (selectbox, slider, date, number)
-        const labelSels = [
-            '.stSelectbox label',
-            '.stSlider label',
-            '[data-testid="stDateInput"] label',
-            '.stNumberInput label'
-        ].join(',');
-        document.querySelectorAll(labelSels).forEach(el => {
+        // ── Labels ────────────────────────────────────────────────
+        document.querySelectorAll(
+            '.stSelectbox label, .stSlider label, ' +
+            '[data-testid="stDateInput"] label, .stNumberInput label'
+        ).forEach(function(el) {
             if (el.closest('[data-testid="stSidebar"]')) return;
-            set(el, 'color', T.labelColor);
-            set(el, '-webkit-text-fill-color', T.labelColor);
+            s(el, 'color', C.labelColor);
+            s(el, '-webkit-text-fill-color', C.labelColor);
         });
 
-        // Text inputs
+        // ── Text inputs (date, number) ─────────────────────────────
         document.querySelectorAll(
             '[data-testid="stDateInput"] input, .stNumberInput input'
-        ).forEach(el => {
+        ).forEach(function(el) {
             if (el.closest('[data-testid="stSidebar"]')) return;
-            set(el, 'background-color', T.inputBg);
-            set(el, 'color', T.valueColor);
-            set(el, '-webkit-text-fill-color', T.valueColor);
+            s(el, 'background-color', C.inputBg);
+            s(el, 'border', C.inputBorder);
+            s(el, 'color', C.text);
+            s(el, '-webkit-text-fill-color', C.textFill);
+            s(el, 'border-radius', '8px');
         });
     }
 
-    // Run now and on every DOM mutation
-    applyTheme();
-    const obs = new MutationObserver(() => applyTheme());
-    obs.observe(document.body, { childList: true, subtree: true, attributes: true });
+    // Run immediately
+    applyColors();
 
-    // Re-run when Streamlit theme toggle is clicked
-    window.addEventListener('message', e => {
-        if (e.data && e.data.type && e.data.type.includes('theme')) applyTheme();
+    // Run on every DOM change (Streamlit widget re-renders)
+    var observer = new MutationObserver(function() {
+        applyColors();
     });
-    // Poll every 500ms for theme changes
-    setInterval(applyTheme, 500);
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+
+    // Poll every 300ms — catches theme toggle + Streamlit reruns
+    setInterval(applyColors, 300);
+
+    // Also catch Streamlit postMessage events
+    window.addEventListener('message', function(e) {
+        setTimeout(applyColors, 50);
+    });
 })();
 </script>
 """, unsafe_allow_html=True)
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  ① INTERACTIVE SIDEBAR
