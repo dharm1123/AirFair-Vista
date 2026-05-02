@@ -106,13 +106,35 @@ def render_html(html: str) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 @st.cache_resource(show_spinner='Loading model...')
 def load_model():
-    """Load the serialised ML pipeline once; shared across all sessions."""
-    if os.path.exists(MODEL_PATH):
-        pkl = joblib.load(MODEL_PATH)
-        return pkl['model'], True
-    return None, False
+    """Load the serialised ML pipeline once; shared across all sessions.
 
-model, MODEL_LOADED = load_model()
+    Returns:
+        (model_or_none, is_loaded, status_message)
+    """
+    if not os.path.exists(MODEL_PATH):
+        return None, False, "Model artifact not found."
+
+    try:
+        with open(MODEL_PATH, "rb") as fp:
+            head = fp.read(256)
+        if head.startswith(b"version https://git-lfs.github.com/spec/v1"):
+            return None, False, (
+                "Model file is a Git LFS pointer, not the real .pkl binary. "
+                "Fetch LFS objects (or fix LFS quota) and redeploy."
+            )
+    except Exception as exc:
+        return None, False, f"Could not inspect model file: {exc}"
+
+    try:
+        pkl = joblib.load(MODEL_PATH)
+        if not isinstance(pkl, dict) or "model" not in pkl:
+            return None, False, "Model artifact format is invalid."
+        return pkl["model"], True, "Model loaded."
+    except Exception as exc:
+        return None, False, f"Model load failed: {exc}"
+
+
+model, MODEL_LOADED, MODEL_LOAD_STATUS = load_model()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -595,6 +617,8 @@ with st.sidebar:
             'Prediction disabled until artifact is available</span></div>',
             unsafe_allow_html=True
         )
+        if MODEL_LOAD_STATUS:
+            st.caption(MODEL_LOAD_STATUS)
     st.divider()
 
     st.markdown('<div class="sb-section">Dataset Info</div>', unsafe_allow_html=True)
@@ -939,7 +963,7 @@ else:
 
 
     else:
-        st.error('❌ Model artifact missing. Run Notebook 17 to create `new_dataset_flight_price_prediction_pipeline.pkl` before predicting.')
+        st.error(f'❌ Prediction disabled. {MODEL_LOAD_STATUS}')
 
 st.markdown('<br>', unsafe_allow_html=True)
 
@@ -984,7 +1008,7 @@ submitted = st.session_state.submitted
 
 if submitted:
     if not MODEL_LOADED:
-        st.error('❌ Model artifact missing. Prediction output is disabled until Notebook 17 creates the new dataset model.')
+        st.error(f'❌ Prediction output is disabled. {MODEL_LOAD_STATUS}')
         st.stop()
 
     # Restore snapshotted inputs
