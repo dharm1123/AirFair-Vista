@@ -50,7 +50,7 @@ if BACKEND_PATH not in sys.path:
     sys.path.append(BACKEND_PATH)
 
 from preprocessor import (
-    AIRLINES, SOURCES, DESTINATIONS, STOPS, MONTHS, WEEKDAYS,
+    AIRLINES, SOURCES, DESTINATIONS, STOPS, CLASSES, MONTHS, WEEKDAYS,
     AIRLINE_MEAN_PRICE, SOURCE_FREQ, DEST_FREQ, SOURCE_MEAN_PRICE,
     PRICE_MIN, PRICE_MAX, PRICE_AVG, PRICE_MED,
     AIRLINE_MEAN, STOPS_MEAN, ROUTE_MEAN, HOUR_MEAN, MONTH_MEAN, WEEKDAY_MEAN,
@@ -180,7 +180,7 @@ model, MODEL_LOADED, MODEL_LOAD_STATUS = load_model(_get_model_url())
 # ─────────────────────────────────────────────────────────────────────────────
 #  PREDICTION HELPERS
 # ─────────────────────────────────────────────────────────────────────────────
-def predict_price(airline, source, destination, stops,
+def predict_price(airline, source, destination, stops, flight_class,
                   dep_hour, journey_month, journey_weekday,
                   journey_day, duration_hours, passengers):
     """Single-flight price prediction using only the real trained model."""
@@ -191,6 +191,7 @@ def predict_price(airline, source, destination, stops,
 
     X = build_feature_matrix([dict(
         airline=airline, source=source, destination=destination,
+        **{"class": flight_class},
         stops=stops, dep_hour=dep_hour, journey_month=journey_month,
         journey_weekday=journey_weekday, journey_day=journey_day,
         duration_hours=duration_hours
@@ -716,6 +717,7 @@ defaults = {
     'destination': VALID_DESTINATIONS[SOURCES[0]][0],
     'airline':     AIRLINES[0],
     'stops':       VALID_AIRLINE_STOPS[AIRLINES[0]][0],
+    'flight_class': 'Economy' if 'Economy' in CLASSES else CLASSES[0],
     'trip_type':   'One-way',   # 'One-way' | 'Round-trip'
     'submitted':   False,
 }
@@ -733,6 +735,8 @@ if st.session_state.airline not in AIRLINES:
     st.session_state.airline = AIRLINES[0]
 if st.session_state.stops not in VALID_AIRLINE_STOPS.get(st.session_state.airline, STOPS):
     st.session_state.stops = VALID_AIRLINE_STOPS[st.session_state.airline][0]
+if st.session_state.flight_class not in CLASSES:
+    st.session_state.flight_class = 'Economy' if 'Economy' in CLASSES else CLASSES[0]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -764,6 +768,10 @@ def on_airline_change():
 
 def on_stops_change():
     st.session_state.stops     = st.session_state['_stops_sel']
+    st.session_state.submitted = False
+
+def on_class_change():
+    st.session_state.flight_class = st.session_state['_class_sel']
     st.session_state.submitted = False
 
 
@@ -862,7 +870,7 @@ st.markdown('<div style="height:20px"></div>', unsafe_allow_html=True)
 # ═══════════════════════════════════════════════════════════════════════════
 st.markdown('<div class="section-title">🛫 Section C · Flight Details</div>', unsafe_allow_html=True)
 
-col_al, col_st = st.columns(2)
+col_al, col_st, col_cls = st.columns(3)
 
 airline = col_al.selectbox(
     'Airline', AIRLINES,
@@ -885,13 +893,23 @@ col_st.markdown(
     unsafe_allow_html=True
 )
 
+flight_class = col_cls.selectbox(
+    'Class', CLASSES,
+    index=CLASSES.index(st.session_state.flight_class),
+    key='_class_sel', on_change=on_class_change
+)
+col_cls.markdown(
+    '<span class="valid-badge">✅ Cabin class applied in model features</span>',
+    unsafe_allow_html=True
+)
+
 # Auto-predict outbound duration from dataset lookup / haversine fallback
 duration_hrs = predict_duration(source, destination, stops)
 st.markdown(
     f'<div class="duration-chip">'
     f'⏱ Auto-predicted Duration: '
     f'<span class="dur-val">{duration_hrs:.1f}h</span>'
-    f'&nbsp;·&nbsp; Based on real {source} → {destination} / {stops} records'
+    f'&nbsp;·&nbsp; Based on real {source} → {destination} / {stops} records · {flight_class}'
     f'</div>',
     unsafe_allow_html=True
 )
@@ -1026,6 +1044,7 @@ if st.button(
     st.session_state._dst_snap   = destination
     st.session_state._al_snap    = airline
     st.session_state._st_snap    = stops
+    st.session_state._cl_snap    = flight_class
     st.session_state._dur_snap   = duration_hrs
     st.session_state._hr_snap    = dep_hour
     st.session_state._mo_snap    = journey_month
@@ -1056,6 +1075,7 @@ if submitted:
     destination     = st.session_state._dst_snap
     airline         = st.session_state._al_snap
     stops           = st.session_state._st_snap
+    flight_class    = st.session_state.get('_cl_snap', st.session_state.flight_class)
     duration_hrs    = st.session_state._dur_snap
     dep_hour        = st.session_state._hr_snap
     journey_month   = st.session_state._mo_snap
@@ -1084,7 +1104,7 @@ if submitted:
     # ── Outbound prediction ────────────────────────────────────────────────
     with st.spinner('🤖  Running ML model...'):
         out_price_inr = predict_price(
-            airline, source, destination, stops,
+            airline, source, destination, stops, flight_class,
             dep_hour, journey_month, journey_weekday,
             int(journey_day), duration_hrs, int(passengers)
         )
@@ -1096,7 +1116,7 @@ if submitted:
         ret_duration_hrs = predict_duration(destination, source, stops)
         with st.spinner('🤖  Running return ML model...'):
             ret_price_inr = predict_price(
-                airline, destination, source, stops,      # reversed route
+                airline, destination, source, stops, flight_class,      # reversed route
                 ret_dep_hour,
                 return_date.month, return_date.weekday(), int(return_date.day),
                 ret_duration_hrs, int(passengers)
@@ -1149,6 +1169,7 @@ if submitted:
             </div>
             <div>
                 <span class="ticket-tag">{stops_txt}</span>
+                <span class="ticket-tag">{flight_class}</span>
                 <span class="ticket-tag">{duration_hrs}h</span>
                 <span class="ticket-tag">{int(passengers)} pax</span>
                 <span class="ticket-tag">🤖 ML Model</span>
@@ -1234,6 +1255,7 @@ if submitted:
                 </div>
                 <div>
                     <span class="ticket-tag">{stops_txt}</span>
+                    <span class="ticket-tag">{flight_class}</span>
                     <span class="ticket-tag">{ret_duration_hrs}h</span>
                     <span class="ticket-tag">{int(passengers)} pax</span>
                     <span class="ticket-tag return-tag">← RETURN</span>
@@ -1376,6 +1398,7 @@ if submitted:
         )
 
     _base = dict(source=source, destination=destination,
+                 **{"class": flight_class},
                  dep_hour=dep_hour, journey_month=journey_month,
                  journey_weekday=journey_weekday, journey_day=int(journey_day),
                  duration_hours=duration_hrs)
@@ -1423,10 +1446,10 @@ if submitted:
         stops_data  = {}
         for st_opt in STOPS:
             stops_data[st_opt] = {
-                'selected': predict_price(airline, source, destination, st_opt,
+                'selected': predict_price(airline, source, destination, st_opt, flight_class,
                                           dep_hour, journey_month, journey_weekday,
                                           int(journey_day), duration_hrs, int(passengers)) * fac,
-                'cheapest': predict_price(cheapest_al, source, destination, st_opt,
+                'cheapest': predict_price(cheapest_al, source, destination, st_opt, flight_class,
                                           dep_hour, journey_month, journey_weekday,
                                           int(journey_day), duration_hrs, int(passengers)) * fac,
             }
@@ -1542,7 +1565,7 @@ if submitted:
         )
         st.caption(
             f'All {len(AIRLINES)} airlines · {source} → {destination} · '
-            f'{stops} · {travel_date.strftime("%d %b %Y")} · '
+            f'{stops} · {flight_class} · {travel_date.strftime("%d %b %Y")} · '
             f'{dep_hour:02d}:00 · {int(passengers)} pax · Sorted cheapest first.'
         )
         table_rows = []
@@ -1654,6 +1677,7 @@ with st.expander('🔀 Scenario Comparison — Compare up to 3 flight configurat
         _sc_durs = [predict_duration(_sc_src, _sc_dst, sc['stops']) for sc in _active]
         _sc_combos = [
             dict(airline=sc['airline'], source=_sc_src, destination=_sc_dst,
+                 **{"class": flight_class},
                  dep_hour=sc['dep_hour'], journey_month=sc['month'],
                  journey_weekday=sc['weekday'], journey_day=15,
                  duration_hours=dur)
@@ -1673,7 +1697,7 @@ with st.expander('🔀 Scenario Comparison — Compare up to 3 flight configurat
                     f'<div class="scenario-card-label">{sc["label"]}{"  🏆" if best else ""}</div>'
                     f'<div class="scenario-card-airline">{sc["airline"]}</div>'
                     f'<div class="scenario-card-detail">'
-                    f'{sc["stops"]} · {MONTHS[sc["month"]]} · '
+                    f'{sc["stops"]} · {flight_class} · {MONTHS[sc["month"]]} · '
                     f'{WEEKDAYS[sc["weekday"]][:3]} · {sc["dep_hour"]:02d}:00 · {dur:.1f}h</div>'
                     f'<div class="scenario-card-price">{sym}{p_d:,.0f}</div>'
                     f'<div class="scenario-card-route">{_sc_src} → {_sc_dst} · 1 pax</div>'

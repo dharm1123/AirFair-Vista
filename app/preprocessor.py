@@ -58,6 +58,7 @@ AIRLINES = NEW_CATEGORY_VALUES["airline"][:]
 SOURCES = NEW_CATEGORY_VALUES["source_city"][:]
 DESTINATIONS = NEW_CATEGORY_VALUES["destination_city"][:]
 STOPS = NEW_CATEGORY_VALUES["stops"][:]
+CLASSES = NEW_CATEGORY_VALUES["class"][:]
 MONTHS = {3: "March", 4: "April", 5: "May", 6: "June"}
 WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
@@ -460,6 +461,7 @@ def build_features_from_ui(
     source: str,
     destination: str,
     stops: str,
+    flight_class: Optional[str],
     dep_hour: int,
     journey_month: int,
     journey_weekday: int,
@@ -478,6 +480,7 @@ def build_features_from_ui(
     departure_time = _bucket_from_hour(int(dep_hour))
     arrival_time = _bucket_from_hour(int(round(dep_hour + duration)) % 24)
     mapped_stops = STOPS_TO_NEW.get(stops, "one")
+    mapped_class = str(flight_class) if flight_class in NEW_CATEGORY_VALUES["class"] else _infer_cabin_class(airline)
     flight_code = f"UI-{mapped_airline}-{source_city[:3].upper()}-{destination_city[:3].upper()}"
 
     return {
@@ -488,7 +491,7 @@ def build_features_from_ui(
         "stops": mapped_stops,
         "arrival_time": arrival_time,
         "destination_city": destination_city,
-        "class": _infer_cabin_class(airline),
+        "class": mapped_class,
         "duration": duration,
         "days_left": _days_left_from_ui(journey_month, journey_day),
     }
@@ -530,6 +533,7 @@ def build_features(
         source,
         destination,
         "one",
+        "Economy",
         dep_hour,
         journey_month,
         journey_weekday,
@@ -553,6 +557,7 @@ def build_feature_matrix(combos: list[Mapping[str, Any]]) -> pd.DataFrame:
             combo["source"],
             combo["destination"],
             combo.get("stops", "one"),
+            combo.get("class", _infer_cabin_class(combo["airline"])),
             combo["dep_hour"],
             combo["journey_month"],
             combo["journey_weekday"],
@@ -680,6 +685,7 @@ __all__ = [
     "SOURCES",
     "DESTINATIONS",
     "STOPS",
+    "CLASSES",
     "MONTHS",
     "WEEKDAYS",
     "AIRLINE_MEAN_PRICE",
