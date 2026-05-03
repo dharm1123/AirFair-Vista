@@ -34,6 +34,8 @@ import joblib
 import os
 import sys
 import textwrap
+import tempfile
+import urllib.request
 import plotly.graph_objects as go
 import plotly.express as px
 import datetime as _dt
@@ -102,39 +104,77 @@ def render_html(html: str) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+#  MODEL FILE HELPERS
+# ─────────────────────────────────────────────────────────────────────────────
+def _is_lfs_pointer(path: str) -> bool:
+    try:
+        with open(path, "rb") as fp:
+            head = fp.read(256)
+        return head.startswith(b"version https://git-lfs.github.com/spec/v1")
+    except Exception:
+        return False
+
+
+def _get_model_url() -> str:
+    # Priority: Streamlit secret MODEL_URL > environment variable
+    try:
+        if "MODEL_URL" in st.secrets and st.secrets["MODEL_URL"]:
+            return str(st.secrets["MODEL_URL"]).strip()
+    except Exception:
+        pass
+    return os.environ.get("AIRFAIR_MODEL_URL", "").strip()
+
+
+def _download_file(url: str, destination: str) -> None:
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(req, timeout=300) as resp, open(destination, "wb") as out:
+        out.write(resp.read())
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 #  MODEL LOADING
 # ─────────────────────────────────────────────────────────────────────────────
 @st.cache_resource(show_spinner='Loading model...')
-def load_model():
+def load_model(model_url: str):
     """Load the serialised ML pipeline once; shared across all sessions.
 
     Returns:
         (model_or_none, is_loaded, status_message)
     """
-    if not os.path.exists(MODEL_PATH):
+    local_exists = os.path.exists(MODEL_PATH)
+    local_pointer = local_exists and _is_lfs_pointer(MODEL_PATH)
+
+    # If local file is missing/pointer and a URL is configured, download real model.
+    fallback_path = os.path.join(tempfile.gettempdir(), "new_dataset_flight_price_prediction_pipeline.pkl")
+    use_fallback = False
+    if model_url and (not local_exists or local_pointer):
+        try:
+            _download_file(model_url, fallback_path)
+            use_fallback = True
+        except Exception as exc:
+            return None, False, f"Model download failed from MODEL_URL: {exc}"
+
+    candidate_path = fallback_path if use_fallback else MODEL_PATH
+    if not os.path.exists(candidate_path):
         return None, False, "Model artifact not found."
+    if _is_lfs_pointer(candidate_path):
+        return None, False, (
+            "Model file is a Git LFS pointer, not the real .pkl binary. "
+            "Fetch LFS objects (or fix LFS quota), or set MODEL_URL in Streamlit secrets."
+        )
 
     try:
-        with open(MODEL_PATH, "rb") as fp:
-            head = fp.read(256)
-        if head.startswith(b"version https://git-lfs.github.com/spec/v1"):
-            return None, False, (
-                "Model file is a Git LFS pointer, not the real .pkl binary. "
-                "Fetch LFS objects (or fix LFS quota) and redeploy."
-            )
-    except Exception as exc:
-        return None, False, f"Could not inspect model file: {exc}"
-
-    try:
-        pkl = joblib.load(MODEL_PATH)
+        pkl = joblib.load(candidate_path)
         if not isinstance(pkl, dict) or "model" not in pkl:
             return None, False, "Model artifact format is invalid."
+        if use_fallback:
+            return pkl["model"], True, "Model loaded via MODEL_URL fallback."
         return pkl["model"], True, "Model loaded."
     except Exception as exc:
         return None, False, f"Model load failed: {exc}"
 
 
-model, MODEL_LOADED, MODEL_LOAD_STATUS = load_model()
+model, MODEL_LOADED, MODEL_LOAD_STATUS = load_model(_get_model_url())
 
 
 # ─────────────────────────────────────────────────────────────────────────────
