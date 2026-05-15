@@ -31,6 +31,7 @@ st.set_page_config(
 import pandas as pd
 import numpy as np
 import joblib
+import json
 import os
 import sys
 import textwrap
@@ -125,6 +126,20 @@ def _get_model_url() -> str:
     return os.environ.get("AIRFAIR_MODEL_URL", "").strip()
 
 
+def _is_truthy(value: str) -> bool:
+    return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _allow_model_download_fallback() -> bool:
+    try:
+        allow_secret = st.secrets.get("ALLOW_MODEL_DOWNLOAD", "")
+        if allow_secret:
+            return _is_truthy(allow_secret)
+    except Exception:
+        pass
+    return _is_truthy(os.environ.get("AIRFAIR_ALLOW_MODEL_DOWNLOAD", ""))
+
+
 def _download_file(url: str, destination: str) -> None:
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
     with urllib.request.urlopen(req, timeout=300) as resp, open(destination, "wb") as out:
@@ -143,16 +158,23 @@ def load_model(model_url: str):
     """
     local_exists = os.path.exists(MODEL_PATH)
     local_pointer = local_exists and _is_lfs_pointer(MODEL_PATH)
+    allow_fallback_download = _allow_model_download_fallback()
 
-    # If local file is missing/pointer and a URL is configured, download real model.
+    # If local file is missing/pointer and explicit fallback is enabled, download real model.
     fallback_path = os.path.join(tempfile.gettempdir(), "new_dataset_flight_price_prediction_pipeline.pkl")
     use_fallback = False
-    if model_url and (not local_exists or local_pointer):
+    if model_url and allow_fallback_download and (not local_exists or local_pointer):
         try:
             _download_file(model_url, fallback_path)
             use_fallback = True
         except Exception as exc:
             return None, False, f"Model download failed from MODEL_URL: {exc}"
+    if (not local_exists or local_pointer) and model_url and not allow_fallback_download:
+        return None, False, (
+            "Local model artifact missing/pointer and download fallback is disabled. "
+            "Provide the real .pkl at deploy time, or enable fallback via "
+            "ALLOW_MODEL_DOWNLOAD=true (secret) / AIRFAIR_ALLOW_MODEL_DOWNLOAD=1."
+        )
 
     candidate_path = fallback_path if use_fallback else MODEL_PATH
     if not os.path.exists(candidate_path):
@@ -205,6 +227,20 @@ def predict_price(airline, source, destination, stops, flight_class,
 def batch_predict_app(combos: list, passengers: int = 1) -> list:
     """Thin wrapper so the rest of the UI doesn't import batch_predict directly."""
     return batch_predict(model, combos, passengers)
+
+
+def _stable_combo_key(combos: list[dict]) -> str:
+    return json.dumps(combos, sort_keys=True, separators=(",", ":"))
+
+
+@st.cache_data(show_spinner=False)
+def _cached_batch_predict(combos_key: str, passengers: int = 1) -> list:
+    combos = json.loads(combos_key)
+    return batch_predict_app(combos, passengers)
+
+
+def cached_batch_predict_app(combos: list[dict], passengers: int = 1) -> list:
+    return _cached_batch_predict(_stable_combo_key(combos), int(passengers))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -640,7 +676,8 @@ with st.sidebar:
     st.markdown('<div class="sb-section">Display Settings</div>', unsafe_allow_html=True)
     currency     = st.selectbox('Currency', ['INR (₹)', 'USD ($)', 'EUR (€)', 'GBP (£)'])
     show_range   = st.toggle('Show Price Range',        value=True)
-    show_compare = st.toggle('Show Airline Comparison', value=True)
+    show_advanced = st.toggle('Enable Advanced Comparisons & Charts', value=False)
+    show_compare = st.toggle('Show Airline Comparison Table', value=False, disabled=not show_advanced)
     st.divider()
 
     st.markdown('<div class="sb-section">Model Status</div>', unsafe_allow_html=True)
@@ -1363,201 +1400,253 @@ if submitted:
             b3.metric('🔴 High Estimate', f'{sym}{high_d:,.0f}', delta=f'+{sym}{high_d - out_price_d:,.0f}')
             b4.metric('📊 Dataset Avg',   f'{sym}{avg_d:,.0f}')
 
-    # ── OUTPUT · Visualisations ────────────────────────────────────────────
-    out_label = 'D' if is_roundtrip else 'C'
-    st.markdown(
-        f'<div class="output-section-title">📊 Output {out_label} · Price Comparison Visualizations</div>',
-        unsafe_allow_html=True
-    )
-
-    PLOT_BG    = 'rgba(0,0,0,0)'
-    GRID_COLOR = 'rgba(148,163,184,0.15)'
-    FONT_FMLY  = 'Plus Jakarta Sans, sans-serif'
-    FONT_CLR   = '#94a3b8'
-    AXIS_LINE  = 'rgba(148,163,184,0.30)'
-    PRIMARY    = '#0052cc'
-    ACCENT     = '#f5a623'
-    SUCCESS    = '#22c55e'
-    DANGER     = '#ef4444'
-
-    def base_layout(title, xaxis_title='', yaxis_title=''):
-        return dict(
-            title=dict(text=title, font=dict(family=FONT_FMLY, size=14, color=FONT_CLR),
-                       x=0, xanchor='left', pad=dict(l=4, b=12)),
-            paper_bgcolor=PLOT_BG, plot_bgcolor=PLOT_BG,
-            font=dict(family=FONT_FMLY, color=FONT_CLR, size=11),
-            xaxis=dict(title=xaxis_title, gridcolor=GRID_COLOR, linecolor=AXIS_LINE,
-                       tickfont=dict(size=10, color=FONT_CLR)),
-            yaxis=dict(title=yaxis_title, gridcolor=GRID_COLOR, linecolor=AXIS_LINE,
-                       tickfont=dict(size=10, color=FONT_CLR), tickprefix=sym),
-            margin=dict(l=10, r=10, t=46, b=10),
-            hoverlabel=dict(bgcolor='#0f172a', font_size=12,
-                            font_family=FONT_FMLY, font_color='white',
-                            bordercolor='#1e293b'),
-            showlegend=False
+    al_prices = {airline: round(out_price_d, 2)}
+    if show_advanced:
+        # ── OUTPUT · Visualisations ────────────────────────────────────────
+        out_label = 'D' if is_roundtrip else 'C'
+        st.markdown(
+            f'<div class="output-section-title">📊 Output {out_label} · Price Comparison Visualizations</div>',
+            unsafe_allow_html=True
         )
 
-    _base = dict(source=source, destination=destination,
-                 **{"class": flight_class},
-                 dep_hour=dep_hour, journey_month=journey_month,
-                 journey_weekday=journey_weekday, journey_day=int(journey_day),
-                 duration_hours=duration_hrs)
-    _al_combos = [{**_base, 'airline': al} for al in AIRLINES]
-    _al_raw    = batch_predict_app(_al_combos, int(passengers))
-    al_prices  = {al: round(p * fac, 2) for al, p in zip(AIRLINES, _al_raw)}
+        PLOT_BG = 'rgba(0,0,0,0)'
+        GRID_COLOR = 'rgba(148,163,184,0.15)'
+        FONT_FMLY = 'Plus Jakarta Sans, sans-serif'
+        FONT_CLR = '#94a3b8'
+        AXIS_LINE = 'rgba(148,163,184,0.30)'
+        PRIMARY = '#0052cc'
+        ACCENT = '#f5a623'
+        SUCCESS = '#22c55e'
 
-    al_df = (
-        pd.DataFrame({'Airline': list(al_prices.keys()), 'Price': list(al_prices.values())})
-        .sort_values('Price').reset_index(drop=True)
-    )
-    al_df['Selected'] = al_df['Airline'] == airline
-    al_df['Label']    = al_df['Price'].apply(lambda v: f'{sym}{v:,.0f}')
-
-    viz_c1, viz_c2 = st.columns(2)
-
-    with viz_c1:
-        st.caption('🏷️ All Airlines · Ranked by Price')
-        bar_colors = [PRIMARY if a == airline else
-                      ('rgba(0,82,204,0.25)' if al_prices[a] < out_price_d else 'rgba(239,68,68,0.25)')
-                      for a in al_df['Airline']]
-        fig1 = go.Figure(go.Bar(
-            x=al_df['Price'], y=al_df['Airline'], orientation='h',
-            marker=dict(color=bar_colors, line=dict(width=0)),
-            text=al_df['Label'], textposition='outside',
-            textfont=dict(size=10, family=FONT_FMLY, color=FONT_CLR),
-            hovertemplate='<b>%{y}</b><br>Price: ' + sym + '%{x:,.0f}<extra></extra>',
-            width=0.65
-        ))
-        fig1.add_vline(x=out_price_d, line_width=2, line_dash='dash', line_color=ACCENT,
-                       annotation_text='Your pick',
-                       annotation_font=dict(size=10, color=ACCENT, family=FONT_FMLY),
-                       annotation_position='top right')
-        layout1 = base_layout('', xaxis_title=f'Price ({sym})')
-        layout1['yaxis']['title'] = ''
-        layout1['margin'] = dict(l=10, r=120, t=10, b=10)
-        layout1['height'] = 340
-        layout1['xaxis']['range'] = [0, al_df['Price'].max() * 1.28]
-        fig1.update_layout(**layout1)
-        st.plotly_chart(fig1, use_container_width=True, config={'displayModeBar': False})
-
-    with viz_c2:
-        st.caption('🔄 Price by Number of Stops')
-        cheapest_al = al_df.iloc[0]['Airline']
-        stops_data  = {}
-        for st_opt in STOPS:
-            stops_data[st_opt] = {
-                'selected': predict_price(airline, source, destination, st_opt, flight_class,
-                                          dep_hour, journey_month, journey_weekday,
-                                          int(journey_day), duration_hrs, int(passengers)) * fac,
-                'cheapest': predict_price(cheapest_al, source, destination, st_opt, flight_class,
-                                          dep_hour, journey_month, journey_weekday,
-                                          int(journey_day), duration_hrs, int(passengers)) * fac,
-            }
-        fig2 = go.Figure()
-        fig2.add_trace(go.Bar(
-            name=airline, x=STOPS,
-            y=[stops_data[s]['selected'] for s in STOPS],
-            marker_color=PRIMARY,
-            text=[f'{sym}{stops_data[s]["selected"]:,.0f}' for s in STOPS],
-            textposition='outside', textfont=dict(size=9, family=FONT_FMLY),
-            hovertemplate='<b>' + airline + '</b><br>%{x}<br>' + sym + '%{y:,.0f}<extra></extra>',
-        ))
-        if cheapest_al != airline:
-            fig2.add_trace(go.Bar(
-                name=cheapest_al, x=STOPS,
-                y=[stops_data[s]['cheapest'] for s in STOPS],
-                marker_color='rgba(0,82,204,0.25)',
-                text=[f'{sym}{stops_data[s]["cheapest"]:,.0f}' for s in STOPS],
-                textposition='outside',
-                textfont=dict(size=9, family=FONT_FMLY, color=FONT_CLR),
-                hovertemplate='<b>' + cheapest_al + '</b><br>%{x}<br>' + sym + '%{y:,.0f}<extra></extra>',
-            ))
-        layout2 = base_layout('', xaxis_title='Stops', yaxis_title=f'Price ({sym})')
-        layout2['barmode']    = 'group'
-        layout2['height']     = 340
-        layout2['showlegend'] = True
-        layout2['legend']     = dict(orientation='h', yanchor='bottom', y=1.02,
-                                     xanchor='left', x=0, font=dict(size=10, family=FONT_FMLY))
-        layout2['margin']     = dict(l=10, r=10, t=40, b=10)
-        fig2.update_layout(**layout2)
-        st.plotly_chart(fig2, use_container_width=True, config={'displayModeBar': False})
-
-    viz_c3, viz_c4 = st.columns(2)
-
-    with viz_c3:
-        st.caption('⏰ Price vs Departure Hour (Top 3 Airlines)')
-        mid_idx = len(al_df) // 2
-        mid_al  = al_df.iloc[mid_idx]['Airline']
-        top3    = list(dict.fromkeys([cheapest_al, airline, mid_al]))[:3]
-        hours   = list(range(0, 24))
-        fig3    = go.Figure()
-        line_colors = [SUCCESS, PRIMARY, ACCENT]
-        _c3_combos = [{**_base, 'airline': al, 'dep_hour': h} for al in top3 for h in hours]
-        _c3_raw    = batch_predict_app(_c3_combos, int(passengers))
-        _c3_prices = {al: [round(_c3_raw[ai * 24 + hi] * fac, 2) for hi in range(24)]
-                      for ai, al in enumerate(top3)}
-        for idx, al in enumerate(top3):
-            is_selected = (al == airline)
-            fig3.add_trace(go.Scatter(
-                x=hours, y=_c3_prices[al], mode='lines',
-                name=al,
-                line=dict(color=line_colors[idx % len(line_colors)],
-                          width=3 if is_selected else 1.5,
-                          dash='solid' if is_selected else 'dot'),
-                hovertemplate='<b>' + al + '</b><br>%{x:02d}:00 → ' + sym + '%{y:,.0f}<extra></extra>'
-            ))
-        fig3.add_vline(x=dep_hour, line_width=1.5, line_dash='dash', line_color=FONT_CLR,
-                       annotation_text=f'Dep {dep_hour:02d}:00',
-                       annotation_font=dict(size=9, color=FONT_CLR, family=FONT_FMLY),
-                       annotation_position='top right')
-        layout3 = base_layout('', xaxis_title='Departure Hour (24h)', yaxis_title=f'Price ({sym})')
-        layout3['height']     = 300
-        layout3['showlegend'] = True
-        layout3['legend']     = dict(orientation='h', yanchor='bottom', y=1.02,
-                                     xanchor='left', x=0, font=dict(size=9, family=FONT_FMLY))
-        layout3['margin']     = dict(l=10, r=10, t=40, b=10)
-        fig3.update_layout(**layout3)
-        st.plotly_chart(fig3, use_container_width=True, config={'displayModeBar': False})
-
-    with viz_c4:
-        st.caption('📈 Price vs Duration (Scatter)')
-        _c4_combos = [{**_base, 'airline': al,
-                       'duration_hours': predict_duration(source, destination, al_df.iloc[0]['Airline'])}
-                      for al in AIRLINES]
-        _c4_raw    = batch_predict_app(_c4_combos, int(passengers))
-        _c4_durs   = [predict_duration(source, destination, stops)] * len(AIRLINES)
-        fig4 = go.Figure()
-        for i, al in enumerate(AIRLINES):
-            is_sel = (al == airline)
-            fig4.add_trace(go.Scatter(
-                x=[_c4_durs[i]], y=[round(_c4_raw[i] * fac, 2)],
-                mode='markers+text', name=al,
-                marker=dict(size=14 if is_sel else 9,
-                            color=PRIMARY if is_sel else FONT_CLR,
-                            symbol='star' if is_sel else 'circle',
-                            line=dict(width=2 if is_sel else 0, color='white')),
-                text=[al], textposition='top center',
-                textfont=dict(size=8 if not is_sel else 10,
-                              color=PRIMARY if is_sel else FONT_CLR, family=FONT_FMLY),
-                hovertemplate='<b>' + al + '</b><br>Duration: %{x:.1f}h<br>Price: ' +
-                              sym + '%{y:,.0f}<extra></extra>',
+        def base_layout(title, xaxis_title='', yaxis_title=''):
+            return dict(
+                title=dict(text=title, font=dict(family=FONT_FMLY, size=14, color=FONT_CLR),
+                           x=0, xanchor='left', pad=dict(l=4, b=12)),
+                paper_bgcolor=PLOT_BG, plot_bgcolor=PLOT_BG,
+                font=dict(family=FONT_FMLY, color=FONT_CLR, size=11),
+                xaxis=dict(title=xaxis_title, gridcolor=GRID_COLOR, linecolor=AXIS_LINE,
+                           tickfont=dict(size=10, color=FONT_CLR)),
+                yaxis=dict(title=yaxis_title, gridcolor=GRID_COLOR, linecolor=AXIS_LINE,
+                           tickfont=dict(size=10, color=FONT_CLR), tickprefix=sym),
+                margin=dict(l=10, r=10, t=46, b=10),
+                hoverlabel=dict(bgcolor='#0f172a', font_size=12,
+                                font_family=FONT_FMLY, font_color='white',
+                                bordercolor='#1e293b'),
                 showlegend=False
+            )
+
+        _base = dict(
+            source=source,
+            destination=destination,
+            **{"class": flight_class},
+            dep_hour=dep_hour,
+            journey_month=journey_month,
+            journey_weekday=journey_weekday,
+            journey_day=int(journey_day),
+            duration_hours=duration_hrs,
+        )
+        _al_combos = [{**_base, 'airline': al} for al in AIRLINES]
+        _al_raw = cached_batch_predict_app(_al_combos, int(passengers))
+        al_prices = {al: round(p * fac, 2) for al, p in zip(AIRLINES, _al_raw)}
+
+        al_df = (
+            pd.DataFrame({'Airline': list(al_prices.keys()), 'Price': list(al_prices.values())})
+            .sort_values('Price')
+            .reset_index(drop=True)
+        )
+        al_df['Selected'] = al_df['Airline'] == airline
+        al_df['Label'] = al_df['Price'].apply(lambda v: f'{sym}{v:,.0f}')
+
+        viz_c1, viz_c2 = st.columns(2)
+
+        with viz_c1:
+            st.caption('🏷️ All Airlines · Ranked by Price')
+            bar_colors = [
+                PRIMARY if a == airline else
+                ('rgba(0,82,204,0.25)' if al_prices[a] < out_price_d else 'rgba(239,68,68,0.25)')
+                for a in al_df['Airline']
+            ]
+            fig1 = go.Figure(go.Bar(
+                x=al_df['Price'], y=al_df['Airline'], orientation='h',
+                marker=dict(color=bar_colors, line=dict(width=0)),
+                text=al_df['Label'], textposition='outside',
+                textfont=dict(size=10, family=FONT_FMLY, color=FONT_CLR),
+                hovertemplate='<b>%{y}</b><br>Price: ' + sym + '%{x:,.0f}<extra></extra>',
+                width=0.65
             ))
-        fig4.add_hline(y=avg_d, line_width=1.5, line_dash='dash', line_color=ACCENT,
-                       annotation_text=f'Dataset avg {sym}{avg_d:,.0f}',
-                       annotation_font=dict(size=9, color=ACCENT, family=FONT_FMLY),
-                       annotation_position='bottom right')
-        layout4 = base_layout('', xaxis_title='Duration (hours)', yaxis_title=f'Price ({sym})')
-        layout4['height']     = 300
-        layout4['showlegend'] = True
-        layout4['legend']     = dict(orientation='h', yanchor='bottom', y=1.02,
-                                     xanchor='left', x=0, font=dict(size=9, family=FONT_FMLY))
-        layout4['margin']     = dict(l=10, r=10, t=40, b=10)
-        fig4.update_layout(**layout4)
-        st.plotly_chart(fig4, use_container_width=True, config={'displayModeBar': False})
+            fig1.add_vline(
+                x=out_price_d,
+                line_width=2,
+                line_dash='dash',
+                line_color=ACCENT,
+                annotation_text='Your pick',
+                annotation_font=dict(size=10, color=ACCENT, family=FONT_FMLY),
+                annotation_position='top right'
+            )
+            layout1 = base_layout('', xaxis_title=f'Price ({sym})')
+            layout1['yaxis']['title'] = ''
+            layout1['margin'] = dict(l=10, r=120, t=10, b=10)
+            layout1['height'] = 340
+            layout1['xaxis']['range'] = [0, al_df['Price'].max() * 1.28]
+            fig1.update_layout(**layout1)
+            st.plotly_chart(fig1, use_container_width=True, config={'displayModeBar': False})
+
+        with viz_c2:
+            st.caption('🔄 Price by Number of Stops')
+            cheapest_al = al_df.iloc[0]['Airline']
+            _stops_selected_combos = [{**_base, 'airline': airline, 'stops': st_opt} for st_opt in STOPS]
+            _stops_cheapest_combos = [{**_base, 'airline': cheapest_al, 'stops': st_opt} for st_opt in STOPS]
+            _stops_selected_raw = cached_batch_predict_app(_stops_selected_combos, int(passengers))
+            _stops_cheapest_raw = cached_batch_predict_app(_stops_cheapest_combos, int(passengers))
+            stops_data = {
+                st_opt: {
+                    'selected': _stops_selected_raw[idx] * fac,
+                    'cheapest': _stops_cheapest_raw[idx] * fac,
+                }
+                for idx, st_opt in enumerate(STOPS)
+            }
+            fig2 = go.Figure()
+            fig2.add_trace(go.Bar(
+                name=airline, x=STOPS,
+                y=[stops_data[s]['selected'] for s in STOPS],
+                marker_color=PRIMARY,
+                text=[f'{sym}{stops_data[s]["selected"]:,.0f}' for s in STOPS],
+                textposition='outside', textfont=dict(size=9, family=FONT_FMLY),
+                hovertemplate='<b>' + airline + '</b><br>%{x}<br>' + sym + '%{y:,.0f}<extra></extra>',
+            ))
+            if cheapest_al != airline:
+                fig2.add_trace(go.Bar(
+                    name=cheapest_al, x=STOPS,
+                    y=[stops_data[s]['cheapest'] for s in STOPS],
+                    marker_color='rgba(0,82,204,0.25)',
+                    text=[f'{sym}{stops_data[s]["cheapest"]:,.0f}' for s in STOPS],
+                    textposition='outside',
+                    textfont=dict(size=9, family=FONT_FMLY, color=FONT_CLR),
+                    hovertemplate='<b>' + cheapest_al + '</b><br>%{x}<br>' + sym + '%{y:,.0f}<extra></extra>',
+                ))
+            layout2 = base_layout('', xaxis_title='Stops', yaxis_title=f'Price ({sym})')
+            layout2['barmode'] = 'group'
+            layout2['height'] = 340
+            layout2['showlegend'] = True
+            layout2['legend'] = dict(
+                orientation='h',
+                yanchor='bottom',
+                y=1.02,
+                xanchor='left',
+                x=0,
+                font=dict(size=10, family=FONT_FMLY)
+            )
+            layout2['margin'] = dict(l=10, r=10, t=40, b=10)
+            fig2.update_layout(**layout2)
+            st.plotly_chart(fig2, use_container_width=True, config={'displayModeBar': False})
+
+        viz_c3, viz_c4 = st.columns(2)
+
+        with viz_c3:
+            st.caption('⏰ Price vs Departure Hour (Top 3 Airlines)')
+            mid_idx = len(al_df) // 2
+            mid_al = al_df.iloc[mid_idx]['Airline']
+            top3 = list(dict.fromkeys([cheapest_al, airline, mid_al]))[:3]
+            hours = list(range(0, 24))
+            fig3 = go.Figure()
+            line_colors = [SUCCESS, PRIMARY, ACCENT]
+            _c3_combos = [{**_base, 'airline': al, 'dep_hour': h} for al in top3 for h in hours]
+            _c3_raw = cached_batch_predict_app(_c3_combos, int(passengers))
+            _c3_prices = {
+                al: [round(_c3_raw[ai * 24 + hi] * fac, 2) for hi in range(24)]
+                for ai, al in enumerate(top3)
+            }
+            for idx, al in enumerate(top3):
+                is_selected = (al == airline)
+                fig3.add_trace(go.Scatter(
+                    x=hours, y=_c3_prices[al], mode='lines',
+                    name=al,
+                    line=dict(
+                        color=line_colors[idx % len(line_colors)],
+                        width=3 if is_selected else 1.5,
+                        dash='solid' if is_selected else 'dot'
+                    ),
+                    hovertemplate='<b>' + al + '</b><br>%{x:02d}:00 → ' + sym + '%{y:,.0f}<extra></extra>'
+                ))
+            fig3.add_vline(
+                x=dep_hour,
+                line_width=1.5,
+                line_dash='dash',
+                line_color=FONT_CLR,
+                annotation_text=f'Dep {dep_hour:02d}:00',
+                annotation_font=dict(size=9, color=FONT_CLR, family=FONT_FMLY),
+                annotation_position='top right'
+            )
+            layout3 = base_layout('', xaxis_title='Departure Hour (24h)', yaxis_title=f'Price ({sym})')
+            layout3['height'] = 300
+            layout3['showlegend'] = True
+            layout3['legend'] = dict(
+                orientation='h',
+                yanchor='bottom',
+                y=1.02,
+                xanchor='left',
+                x=0,
+                font=dict(size=9, family=FONT_FMLY)
+            )
+            layout3['margin'] = dict(l=10, r=10, t=40, b=10)
+            fig3.update_layout(**layout3)
+            st.plotly_chart(fig3, use_container_width=True, config={'displayModeBar': False})
+
+        with viz_c4:
+            st.caption('📈 Price vs Duration (Scatter)')
+            _c4_durs = [predict_duration(source, destination, stops)] * len(AIRLINES)
+            _c4_combos = [
+                {**_base, 'airline': al, 'duration_hours': _c4_durs[i]}
+                for i, al in enumerate(AIRLINES)
+            ]
+            _c4_raw = cached_batch_predict_app(_c4_combos, int(passengers))
+            fig4 = go.Figure()
+            for i, al in enumerate(AIRLINES):
+                is_sel = (al == airline)
+                fig4.add_trace(go.Scatter(
+                    x=[_c4_durs[i]], y=[round(_c4_raw[i] * fac, 2)],
+                    mode='markers+text', name=al,
+                    marker=dict(
+                        size=14 if is_sel else 9,
+                        color=PRIMARY if is_sel else FONT_CLR,
+                        symbol='star' if is_sel else 'circle',
+                        line=dict(width=2 if is_sel else 0, color='white')
+                    ),
+                    text=[al], textposition='top center',
+                    textfont=dict(size=8 if not is_sel else 10,
+                                  color=PRIMARY if is_sel else FONT_CLR, family=FONT_FMLY),
+                    hovertemplate='<b>' + al + '</b><br>Duration: %{x:.1f}h<br>Price: ' +
+                                  sym + '%{y:,.0f}<extra></extra>',
+                    showlegend=False
+                ))
+            fig4.add_hline(
+                y=avg_d,
+                line_width=1.5,
+                line_dash='dash',
+                line_color=ACCENT,
+                annotation_text=f'Dataset avg {sym}{avg_d:,.0f}',
+                annotation_font=dict(size=9, color=ACCENT, family=FONT_FMLY),
+                annotation_position='bottom right'
+            )
+            layout4 = base_layout('', xaxis_title='Duration (hours)', yaxis_title=f'Price ({sym})')
+            layout4['height'] = 300
+            layout4['showlegend'] = True
+            layout4['legend'] = dict(
+                orientation='h',
+                yanchor='bottom',
+                y=1.02,
+                xanchor='left',
+                x=0,
+                font=dict(size=9, family=FONT_FMLY)
+            )
+            layout4['margin'] = dict(l=10, r=10, t=40, b=10)
+            fig4.update_layout(**layout4)
+            st.plotly_chart(fig4, use_container_width=True, config={'displayModeBar': False})
+    else:
+        st.info('ℹ️ Advanced comparisons/charts are disabled. Enable them from the sidebar to run heavier analytics.')
 
     # ── Full comparison table ──────────────────────────────────────────────
-    if show_compare:
+    if show_advanced and show_compare:
         compare_label = 'E' if is_roundtrip else 'D'
         st.markdown(
             f'<div class="output-section-title">📋 Output {compare_label} · Full Price Comparison Table</div>',
@@ -1683,7 +1772,7 @@ with st.expander('🔀 Scenario Comparison — Compare up to 3 flight configurat
                  duration_hours=dur)
             for sc, dur in zip(_active, _sc_durs)
         ]
-        _sc_prices = batch_predict_app(_sc_combos, 1)
+        _sc_prices = cached_batch_predict_app(_sc_combos, 1)
         _sc_min    = min(_sc_prices)
 
         res_cols = st.columns(int(n_sc))
