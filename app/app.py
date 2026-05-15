@@ -230,7 +230,7 @@ def batch_predict_app(combos: list, passengers: int = 1) -> list:
 
 
 def _stable_combo_key(combos: list[dict]) -> str:
-    return json.dumps(combos, sort_keys=True, separators=(",", ":"))
+    return json.dumps(combos, sort_keys=True, separators=(",", ":"), default=str)
 
 
 @st.cache_data(show_spinner=False)
@@ -1594,6 +1594,7 @@ if submitted:
 
         with viz_c4:
             st.caption('📈 Price vs Duration (Scatter)')
+            # Keep duration fixed across airlines to isolate the airline-price effect.
             _c4_durs = [predict_duration(source, destination, stops)] * len(AIRLINES)
             _c4_combos = [
                 {**_base, 'airline': al, 'duration_hours': _c4_durs[i]}

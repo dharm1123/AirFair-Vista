@@ -6,7 +6,7 @@ import os
 from datetime import date
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Mapping, Optional
+from typing import Any, Callable, Mapping, Optional
 
 import numpy as np
 import pandas as pd
@@ -274,7 +274,7 @@ def get_dest_freq() -> dict[str, float]:
 class _LazyMapping(Mapping[Any, Any]):
     """Mapping proxy that loads its backing dict lazily on first access."""
 
-    def __init__(self, loader):
+    def __init__(self, loader: Callable[[], dict[Any, Any]]):
         self._loader = loader
         self._data: Optional[dict[Any, Any]] = None
 
