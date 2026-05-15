@@ -6,7 +6,7 @@ import os
 from datetime import date
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Mapping, Optional
+from typing import Any, Callable, Mapping, Optional
 
 import numpy as np
 import pandas as pd
@@ -218,15 +218,6 @@ _default_source_freq = 1 / max(len(SOURCES), 1)
 _default_dest_freq = 1 / max(len(DESTINATIONS), 1)
 _source_freq_fallback = {city: _default_source_freq for city in SOURCES}
 _dest_freq_fallback = {city: _default_dest_freq for city in DESTINATIONS}
-try:
-    _freq_df = pd.read_csv(RAW_DATA_PATH, usecols=["source_city", "destination_city"])
-    _source_vc = _freq_df["source_city"].value_counts(normalize=True)
-    _dest_vc = _freq_df["destination_city"].value_counts(normalize=True)
-    SOURCE_FREQ = {city: float(_source_vc.get(city, _source_freq_fallback[city])) for city in SOURCES}
-    DEST_FREQ = {city: float(_dest_vc.get(city, _dest_freq_fallback[city])) for city in DESTINATIONS}
-except Exception:
-    SOURCE_FREQ = _source_freq_fallback.copy()
-    DEST_FREQ = _dest_freq_fallback.copy()
 SOURCE_MEAN_PRICE = {old: NEW_SOURCE_MEAN.get(CITY_TO_NEW[old], PRICE_AVG) for old in SOURCES}
 ROUTE_MEAN = {
     (src, dst): NEW_ROUTE_MEAN.get((CITY_TO_NEW[src], CITY_TO_NEW[dst]), PRICE_AVG)
@@ -234,16 +225,6 @@ ROUTE_MEAN = {
     for dst in CITY_TO_NEW
     if src in CITY_COORDS and dst in CITY_COORDS and CITY_TO_NEW[src] != CITY_TO_NEW[dst]
 }
-
-DURATION_LOOKUP = {}
-try:
-    _dur_df = pd.read_csv(RAW_DATA_PATH, usecols=["source_city", "destination_city", "stops", "duration"])
-    DURATION_LOOKUP = {
-        (src, dst, stop): float(val)
-        for (src, dst, stop), val in _dur_df.groupby(["source_city", "destination_city", "stops"])["duration"].mean().round(2).items()
-    }
-except Exception:
-    DURATION_LOOKUP = {}
 AVG_SPEED_BY_STOPS = {"zero": 756.8, "one": 198.9, "two_or_more": 116.8}
 
 
@@ -265,6 +246,92 @@ def _bucket_from_hour(hour: int) -> str:
 HOUR_MEAN = {hour: NEW_DEPARTURE_MEAN[_bucket_from_hour(hour)] for hour in range(24)}
 MONTH_MEAN = {month: PRICE_AVG for month in range(1, 13)}
 WEEKDAY_MEAN = {weekday: PRICE_AVG for weekday in range(7)}
+
+
+@lru_cache(maxsize=1)
+def _source_dest_freq_from_data() -> tuple[dict[str, float], dict[str, float]]:
+    """Load source/destination frequencies lazily from the raw dataset."""
+
+    try:
+        freq_df = pd.read_csv(RAW_DATA_PATH, usecols=["source_city", "destination_city"])
+        source_vc = freq_df["source_city"].value_counts(normalize=True)
+        dest_vc = freq_df["destination_city"].value_counts(normalize=True)
+        source_freq = {city: float(source_vc.get(city, _source_freq_fallback[city])) for city in SOURCES}
+        dest_freq = {city: float(dest_vc.get(city, _dest_freq_fallback[city])) for city in DESTINATIONS}
+        return source_freq, dest_freq
+    except Exception:
+        return _source_freq_fallback.copy(), _dest_freq_fallback.copy()
+
+
+def get_source_freq() -> dict[str, float]:
+    return _source_dest_freq_from_data()[0]
+
+
+def get_dest_freq() -> dict[str, float]:
+    return _source_dest_freq_from_data()[1]
+
+
+class _LazyMapping(Mapping[Any, Any]):
+    """Mapping proxy that loads its backing dict lazily on first access."""
+
+    def __init__(self, loader: Callable[[], dict[Any, Any]]):
+        self._loader = loader
+        self._data: Optional[dict[Any, Any]] = None
+
+    def _ensure(self) -> dict[Any, Any]:
+        if self._data is None:
+            self._data = dict(self._loader())
+        return self._data
+
+    def __getitem__(self, key: Any) -> Any:
+        return self._ensure()[key]
+
+    def __iter__(self):
+        return iter(self._ensure())
+
+    def __len__(self) -> int:
+        return len(self._ensure())
+
+    def __contains__(self, key: object) -> bool:
+        return key in self._ensure()
+
+    def get(self, key: Any, default: Any = None) -> Any:
+        return self._ensure().get(key, default)
+
+    def items(self):
+        return self._ensure().items()
+
+    def keys(self):
+        return self._ensure().keys()
+
+    def values(self):
+        return self._ensure().values()
+
+    def copy(self) -> dict[Any, Any]:
+        return self._ensure().copy()
+
+
+# Keep module-level aliases for backward compatibility, while staying lazy.
+SOURCE_FREQ = _LazyMapping(get_source_freq)
+DEST_FREQ = _LazyMapping(get_dest_freq)
+
+
+@lru_cache(maxsize=1)
+def _duration_lookup_from_data() -> dict[tuple[str, str, str], float]:
+    """Build duration lookup lazily from the raw dataset."""
+
+    try:
+        dur_df = pd.read_csv(RAW_DATA_PATH, usecols=["source_city", "destination_city", "stops", "duration"])
+        return {
+            (src, dst, stop): float(val)
+            for (src, dst, stop), val in dur_df.groupby(["source_city", "destination_city", "stops"])["duration"].mean().round(2).items()
+        }
+    except Exception:
+        return {}
+
+
+# Backward-compatible export name, now lazy-loaded on first access.
+DURATION_LOOKUP: Mapping[tuple[str, str, str], float] = _LazyMapping(_duration_lookup_from_data)
 
 
 def data_loading(path: Optional[os.PathLike[str] | str] = None) -> pd.DataFrame:
@@ -400,9 +467,10 @@ def is_indian_holiday(month: int, day: int) -> int:
 
 
 def predict_duration(source: str, destination: str, stops: str) -> float:
+    duration_lookup = _duration_lookup_from_data()
     key = (source, destination, stops)
-    if key in DURATION_LOOKUP:
-        return DURATION_LOOKUP[key]
+    if key in duration_lookup:
+        return duration_lookup[key]
     dist = haversine_km(source, destination)
     speed = AVG_SPEED_BY_STOPS.get(stops, 300.0)
     if dist > 0 and speed > 0:
