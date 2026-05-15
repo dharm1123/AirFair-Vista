@@ -271,9 +271,49 @@ def get_dest_freq() -> dict[str, float]:
     return _source_dest_freq_from_data()[1]
 
 
-# Keep module-level aliases for backward compatibility, but avoid import-time CSV reads.
-SOURCE_FREQ = _source_freq_fallback.copy()
-DEST_FREQ = _dest_freq_fallback.copy()
+class _LazyMapping(Mapping[Any, Any]):
+    """Mapping proxy that loads its backing dict lazily on first access."""
+
+    def __init__(self, loader):
+        self._loader = loader
+        self._data: Optional[dict[Any, Any]] = None
+
+    def _ensure(self) -> dict[Any, Any]:
+        if self._data is None:
+            self._data = dict(self._loader())
+        return self._data
+
+    def __getitem__(self, key: Any) -> Any:
+        return self._ensure()[key]
+
+    def __iter__(self):
+        return iter(self._ensure())
+
+    def __len__(self) -> int:
+        return len(self._ensure())
+
+    def __contains__(self, key: object) -> bool:
+        return key in self._ensure()
+
+    def get(self, key: Any, default: Any = None) -> Any:
+        return self._ensure().get(key, default)
+
+    def items(self):
+        return self._ensure().items()
+
+    def keys(self):
+        return self._ensure().keys()
+
+    def values(self):
+        return self._ensure().values()
+
+    def copy(self) -> dict[Any, Any]:
+        return self._ensure().copy()
+
+
+# Keep module-level aliases for backward compatibility, while staying lazy.
+SOURCE_FREQ = _LazyMapping(get_source_freq)
+DEST_FREQ = _LazyMapping(get_dest_freq)
 
 
 @lru_cache(maxsize=1)
@@ -290,8 +330,8 @@ def _duration_lookup_from_data() -> dict[tuple[str, str, str], float]:
         return {}
 
 
-# Backward-compatible export name; actual lookup is now lazy via _duration_lookup_from_data().
-DURATION_LOOKUP: dict[tuple[str, str, str], float] = {}
+# Backward-compatible export name, now lazy-loaded on first access.
+DURATION_LOOKUP: Mapping[tuple[str, str, str], float] = _LazyMapping(_duration_lookup_from_data)
 
 
 def data_loading(path: Optional[os.PathLike[str] | str] = None) -> pd.DataFrame:
