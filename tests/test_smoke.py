@@ -1,4 +1,9 @@
-from app.preprocessor import SOURCES, VALID_DESTINATIONS, get_validation_errors
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "app"))
+
+from preprocessor import SOURCES, VALID_DESTINATIONS, get_validation_errors
 
 
 def test_valid_destinations_exclude_source_city():
