@@ -1175,7 +1175,9 @@ if submitted:
     dst_code  = _city_code(destination)
     stops_txt = _stops_display(stops)
     dep_str   = f"{dep_hour:02d}:00"
-    day_str   = f"{WEEKDAYS[journey_weekday][:3]}, {int(journey_day)} {MONTHS[journey_month]}"
+    month_name = MONTHS.get(int(journey_month), str(journey_month))
+    weekday_name = WEEKDAYS[int(journey_weekday)] if int(journey_weekday) in range(len(WEEKDAYS)) else str(journey_weekday)
+    day_str   = f"{weekday_name[:3]}, {int(journey_day)} {month_name}"
     vs_class  = 'vs-avg-up' if diff > 0 else 'vs-avg-down'
     vs_text   = (f'▲ {sym}{abs(diff):,.0f} above avg'
                  if diff > 0 else f'▼ {sym}{abs(diff):,.0f} below avg')
@@ -1409,6 +1411,7 @@ if submitted:
             unsafe_allow_html=True
         )
 
+<<<<<<< HEAD
         PLOT_BG = 'rgba(0,0,0,0)'
         GRID_COLOR = 'rgba(148,163,184,0.15)'
         FONT_FMLY = 'Plus Jakarta Sans, sans-serif'
@@ -1432,8 +1435,876 @@ if submitted:
                 hoverlabel=dict(bgcolor='#0f172a', font_size=12,
                                 font_family=FONT_FMLY, font_color='white',
                                 bordercolor='#1e293b'),
+=======
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  CURRENCY HELPERS
+# ─────────────────────────────────────────────────────────────────────────────
+SYM = {'INR (₹)': '₹', 'USD ($)': '$', 'EUR (€)': '€', 'GBP (£)': '£'}
+FAC = {'INR (₹)': 1.0, 'USD ($)': 0.012, 'EUR (€)': 0.011, 'GBP (£)': 0.0095}
+sym = SYM[currency]
+fac = FAC[currency]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  PAGE HEADER
+# ─────────────────────────────────────────────────────────────────────────────
+model_pill = (
+    '<span class="model-pill">🤖 Real ML Pipeline Active</span>'
+    if MODEL_LOADED
+    else '<span class="model-pill-warn">⚠️ Model Artifact Required</span>'
+)
+render_html(f"""
+<div class="page-header">
+    <h1>Flight Price <em>Predictor</em></h1>
+    <p>Indian domestic routes · 300,153 real flights · new dataset model</p>
+    {model_pill}
+</div>
+""")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  SESSION STATE INITIALISATION
+#  All mutable widget values go into st.session_state so that Streamlit's
+#  rerun loop does not reset them on every widget interaction.
+# ─────────────────────────────────────────────────────────────────────────────
+today = _date.today()
+
+defaults = {
+    'source':      SOURCES[0],
+    'destination': VALID_DESTINATIONS[SOURCES[0]][0],
+    'airline':     AIRLINES[0],
+    'stops':       VALID_AIRLINE_STOPS[AIRLINES[0]][0],
+    'flight_class': 'Economy' if 'Economy' in CLASSES else CLASSES[0],
+    'trip_type':   'One-way',   # 'One-way' | 'Round-trip'
+    'submitted':   False,
+}
+for k, v in defaults.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
+
+# Keep old browser sessions safe after switching from Notebook 14's legacy city
+# list to the Notebook 18 six-city dataset.
+if st.session_state.source not in SOURCES:
+    st.session_state.source = SOURCES[0]
+if st.session_state.destination not in VALID_DESTINATIONS.get(st.session_state.source, DESTINATIONS):
+    st.session_state.destination = VALID_DESTINATIONS[st.session_state.source][0]
+if st.session_state.airline not in AIRLINES:
+    st.session_state.airline = AIRLINES[0]
+if st.session_state.stops not in VALID_AIRLINE_STOPS.get(st.session_state.airline, STOPS):
+    st.session_state.stops = VALID_AIRLINE_STOPS[st.session_state.airline][0]
+if st.session_state.flight_class not in CLASSES:
+    st.session_state.flight_class = 'Economy' if 'Economy' in CLASSES else CLASSES[0]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  CALLBACKS — keep session state consistent when widgets change
+# ─────────────────────────────────────────────────────────────────────────────
+def on_source_change():
+    """When source changes, reset destination to the first valid option for
+    that source using the VALID_DESTINATIONS lookup table."""
+    new_src = st.session_state['_source_sel']
+    st.session_state.source      = new_src
+    valid_dsts                   = VALID_DESTINATIONS.get(new_src, DESTINATIONS)
+    st.session_state.destination = valid_dsts[0]
+    st.session_state['_dst_sel'] = valid_dsts[0]
+    st.session_state.submitted   = False
+
+def on_destination_change():
+    st.session_state.destination = st.session_state['_dst_sel']
+    st.session_state.submitted   = False
+
+def on_airline_change():
+    """When airline changes, reset stops to the first valid stop option
+    for that airline using VALID_AIRLINE_STOPS."""
+    new_al = st.session_state['_airline_sel']
+    st.session_state.airline     = new_al
+    valid_stops                  = VALID_AIRLINE_STOPS.get(new_al, STOPS)
+    st.session_state.stops       = valid_stops[0]
+    st.session_state['_stops_sel'] = valid_stops[0]
+    st.session_state.submitted   = False
+
+def on_stops_change():
+    st.session_state.stops     = st.session_state['_stops_sel']
+    st.session_state.submitted = False
+
+def on_class_change():
+    st.session_state.flight_class = st.session_state['_class_sel']
+    st.session_state.submitted = False
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  SECTION A — TRIP TYPE
+#  New: user chooses One-way or Round-trip before selecting route.
+# ═══════════════════════════════════════════════════════════════════════════
+st.markdown('<div class="section-title">🔀 Section A · Trip Type</div>', unsafe_allow_html=True)
+
+trip_col1, trip_col2 = st.columns(2)
+with trip_col1:
+    if st.button(
+        '→  One-way',
+        use_container_width=True,
+        type='primary' if st.session_state.trip_type == 'One-way' else 'secondary',
+        key='_oneway_btn'
+    ):
+        st.session_state.trip_type = 'One-way'
+        st.session_state.submitted = False
+        st.rerun()
+
+with trip_col2:
+    if st.button(
+        '⇄  Round-trip',
+        use_container_width=True,
+        type='primary' if st.session_state.trip_type == 'Round-trip' else 'secondary',
+        key='_roundtrip_btn'
+    ):
+        st.session_state.trip_type = 'Round-trip'
+        st.session_state.submitted = False
+        st.rerun()
+
+is_roundtrip = (st.session_state.trip_type == 'Round-trip')
+
+if is_roundtrip:
+    render_html("""
+    <div class="return-banner">
+        <div class="return-banner-icon">⇄</div>
+        <div>
+            <div class="return-banner-text">Round-trip selected</div>
+            <div class="return-banner-sub">
+                Return flight will be predicted on the reverse route
+                (same airline &amp; stops, different date).
+            </div>
+        </div>
+    </div>
+    """)
+
+st.markdown('<div style="height:12px"></div>', unsafe_allow_html=True)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  SECTION B — ROUTE
+#  IMPROVEMENT 1: Dynamic destination options driven by VALID_DESTINATIONS.
+#  Callback on_source_change() resets destination to the first valid choice
+#  whenever the user picks a new source city.
+# ═══════════════════════════════════════════════════════════════════════════
+st.markdown('<div class="section-title">✈ Section B · Route</div>', unsafe_allow_html=True)
+
+col_src, col_arrow, col_dst = st.columns([5, 1, 5])
+
+source = col_src.selectbox(
+    'Source City', SOURCES,
+    index=SOURCES.index(st.session_state.source),
+    key='_source_sel', on_change=on_source_change
+)
+col_arrow.markdown(
+    '<div style="text-align:center;padding-top:28px;font-size:1.4rem;color:#0052cc">→</div>',
+    unsafe_allow_html=True
+)
+
+# Dynamically compute valid destinations for the current source
+valid_dsts = VALID_DESTINATIONS.get(st.session_state.source, DESTINATIONS)
+# Guard: if stored destination no longer valid after source change, reset
+if st.session_state.destination not in valid_dsts:
+    st.session_state.destination = valid_dsts[0]
+
+destination = col_dst.selectbox(
+    'Destination City', valid_dsts,
+    index=valid_dsts.index(st.session_state.destination),
+    key='_dst_sel', on_change=on_destination_change
+)
+auto_dst = (len(valid_dsts) == 1)
+col_dst.markdown(
+    f'<span class="valid-badge">'
+    f'{"✈ Auto-set" if auto_dst else "✅"} {len(valid_dsts)} route(s) from {source}'
+    f'</span>',
+    unsafe_allow_html=True
+)
+
+st.markdown('<div style="height:20px"></div>', unsafe_allow_html=True)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  SECTION C — FLIGHT DETAILS
+# ═══════════════════════════════════════════════════════════════════════════
+st.markdown('<div class="section-title">🛫 Section C · Flight Details</div>', unsafe_allow_html=True)
+
+col_al, col_st, col_cls = st.columns(3)
+
+airline = col_al.selectbox(
+    'Airline', AIRLINES,
+    index=AIRLINES.index(st.session_state.airline),
+    key='_airline_sel', on_change=on_airline_change
+)
+valid_stops = VALID_AIRLINE_STOPS.get(st.session_state.airline, STOPS)
+if st.session_state.stops not in valid_stops:
+    st.session_state.stops = valid_stops[0]
+
+stops = col_st.selectbox(
+    'Stops', valid_stops,
+    index=valid_stops.index(st.session_state.stops),
+    key='_stops_sel', on_change=on_stops_change
+)
+col_st.markdown(
+    f'<span class="valid-badge">'
+    f'{"✈ Auto-set" if len(valid_stops)==1 else "✅"} {len(valid_stops)} stop option(s) for {airline}'
+    f'</span>',
+    unsafe_allow_html=True
+)
+
+flight_class = col_cls.selectbox(
+    'Class', CLASSES,
+    index=CLASSES.index(st.session_state.flight_class),
+    key='_class_sel', on_change=on_class_change
+)
+col_cls.markdown(
+    '<span class="valid-badge">✅ Cabin class applied in model features</span>',
+    unsafe_allow_html=True
+)
+
+# Auto-predict outbound duration from dataset lookup / haversine fallback
+duration_hrs = predict_duration(source, destination, stops)
+st.markdown(
+    f'<div class="duration-chip">'
+    f'⏱ Auto-predicted Duration: '
+    f'<span class="dur-val">{duration_hrs:.1f}h</span>'
+    f'&nbsp;·&nbsp; Based on real {source} → {destination} / {stops} records · {flight_class}'
+    f'</div>',
+    unsafe_allow_html=True
+)
+
+st.markdown('<div style="height:20px"></div>', unsafe_allow_html=True)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  SECTION D — JOURNEY DETAILS
+#  IMPROVEMENT 2: Return date picker shown only for Round-trip.
+#  Validation: return_date > travel_date enforced via min_value.
+# ═══════════════════════════════════════════════════════════════════════════
+st.markdown('<div class="section-title">📅 Section D · Journey Details</div>', unsafe_allow_html=True)
+
+if is_roundtrip:
+    # For round-trip, show both departure and return dates side-by-side
+    cal1, cal2, cal3, cal4 = st.columns([3, 3, 2, 1])
+
+    travel_date = cal1.date_input(
+        '📆 Departure Date',
+        value=today + _timedelta(days=1),
+        min_value=today + _timedelta(days=1),
+        max_value=_date(2030, 12, 31),
+        help='Outbound departure date.',
+        key='_travel_date'
+    )
+
+    # Return date must be strictly after departure date
+    return_date = cal2.date_input(
+        '🔄 Return Date',
+        value=travel_date + _timedelta(days=3),   # sensible default: 3 days later
+        min_value=travel_date + _timedelta(days=1),  # enforce return > departure
+        max_value=_date(2030, 12, 31),
+        help='Return date must be after departure date.',
+        key='_return_date'
+    )
+
+    # Validate that return_date > travel_date (belt-and-suspenders in case
+    # the user somehow edits both pickers in quick succession)
+    if return_date <= travel_date:
+        st.error('❌ Return date must be after departure date.')
+        return_date = travel_date + _timedelta(days=1)
+
+    dep_hour   = cal3.slider('🕐 Dep Hour', 0, 23, 8,  key='_dep_hour')
+    passengers = cal4.number_input('👥 Pax', 1, 9, 1,   key='_passengers')
+
+    # Return departure hour — separate slider so user can pick e.g. evening return
+    ret_col1, ret_col2 = st.columns([3, 3])
+    ret_dep_hour = ret_col1.slider(
+        '🕐 Return Departure Hour', 0, 23, 14,
+        help='Hour of the return flight departure.',
+        key='_ret_dep_hour'
+    )
+    ret_col1.caption(f'Return departs at {ret_dep_hour:02d}:00')
+    cal1.caption(
+        f'📅 {travel_date.strftime("%A, %d %B %Y")} · '
+        f'Month={travel_date.month}, Weekday={travel_date.weekday()}'
+    )
+    cal2.caption(
+        f'🔄 {return_date.strftime("%A, %d %B %Y")} · '
+        f'{(return_date - travel_date).days} day(s) later'
+    )
+
+else:
+    # One-way: original 3-column layout
+    cal1, cal2, cal3 = st.columns([3, 2, 1])
+
+    travel_date = cal1.date_input(
+        '📆 Travel Date',
+        value=today + _timedelta(days=1),
+        min_value=today + _timedelta(days=1),
+        max_value=_date(2030, 12, 31),
+        help='Only future dates are selectable.',
+        key='_travel_date'
+    )
+    cal1.caption(
+        f'📅 {travel_date.strftime("%A, %d %B %Y")} · '
+        f'Month={travel_date.month}, Day={travel_date.day}, Weekday={travel_date.weekday()}'
+    )
+    dep_hour   = cal2.slider('🕐 Departure Hour', 0, 23, 8, key='_dep_hour')
+    passengers = cal3.number_input('👥 Passengers',  1, 9, 1, key='_passengers')
+    return_date    = None
+    ret_dep_hour   = None
+
+# Derive date components for outbound flight
+journey_month   = travel_date.month
+journey_day     = travel_date.day
+journey_weekday = travel_date.weekday()
+
+st.markdown('<br>', unsafe_allow_html=True)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  VALIDATION & LIVE ESTIMATE
+# ─────────────────────────────────────────────────────────────────────────────
+live_errors, live_warnings = get_validation_errors(
+    source, destination, airline, stops, int(passengers), dep_hour
+)
+
+if live_errors:
+    for e in live_errors:
+        st.error(f'❌ {e}')
+elif live_warnings:
+    for w in live_warnings:
+        st.warning(f'⚠️ {w}')
+else:
+    if MODEL_LOADED:
+        st.success('✅ All inputs valid — ready to predict!')
+
+
+    else:
+        st.error(f'❌ Prediction disabled. {MODEL_LOAD_STATUS}')
+
+st.markdown('<br>', unsafe_allow_html=True)
+
+btn_label = (
+    '🔍  Predict Price'
+    if not live_errors and MODEL_LOADED
+    else ('📦  Model Required to Predict' if not live_errors else '⚠️  Fix Errors Above to Predict')
+)
+if st.button(
+    btn_label,
+    use_container_width=True,
+    type='primary',
+    disabled=bool(live_errors) or not MODEL_LOADED,
+    key='_predict_btn'
+):
+    # Snapshot all inputs into session_state so the output block
+    # renders from stable values even after further widget interactions
+    st.session_state.submitted   = True
+    st.session_state._src_snap   = source
+    st.session_state._dst_snap   = destination
+    st.session_state._al_snap    = airline
+    st.session_state._st_snap    = stops
+    st.session_state._cl_snap    = flight_class
+    st.session_state._dur_snap   = duration_hrs
+    st.session_state._hr_snap    = dep_hour
+    st.session_state._mo_snap    = journey_month
+    st.session_state._wd_snap    = journey_weekday
+    st.session_state._dy_snap    = journey_day
+    st.session_state._px_snap    = passengers
+    st.session_state._td_snap    = travel_date
+    st.session_state._trip_snap  = st.session_state.trip_type
+    st.session_state._ret_snap   = return_date      # None for one-way
+    st.session_state._rhr_snap   = ret_dep_hour     # None for one-way
+    st.rerun()
+
+st.divider()
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  OUTPUT BLOCK — only rendered after the predict button is pressed
+# ═══════════════════════════════════════════════════════════════════════════
+submitted = st.session_state.submitted
+
+if submitted:
+    if not MODEL_LOADED:
+        st.error(f'❌ Prediction output is disabled. {MODEL_LOAD_STATUS}')
+        st.stop()
+
+    # Restore snapshotted inputs
+    source          = st.session_state._src_snap
+    destination     = st.session_state._dst_snap
+    airline         = st.session_state._al_snap
+    stops           = st.session_state._st_snap
+    flight_class    = st.session_state.get('_cl_snap', st.session_state.flight_class)
+    duration_hrs    = st.session_state._dur_snap
+    dep_hour        = st.session_state._hr_snap
+    journey_month   = st.session_state._mo_snap
+    journey_weekday = st.session_state._wd_snap
+    journey_day     = st.session_state._dy_snap
+    passengers      = st.session_state._px_snap
+    travel_date     = st.session_state._td_snap
+    is_roundtrip    = (st.session_state._trip_snap == 'Round-trip')
+    return_date     = st.session_state._ret_snap
+    ret_dep_hour    = st.session_state._rhr_snap
+
+    errors, warnings = get_validation_errors(
+        source, destination, airline, stops, int(passengers), dep_hour
+    )
+    for w in warnings:
+        st.warning(f'⚠️ {w}')
+    if errors:
+        for e in errors:
+            st.error(f'❌ {e}')
+        st.info(
+            '💡 **Valid routes:** choose any two different cities from '
+            'Bangalore, Chennai, Delhi, Hyderabad, Kolkata, and Mumbai.'
+        )
+        st.stop()
+
+    # ── Outbound prediction ────────────────────────────────────────────────
+    with st.spinner('🤖  Running ML model...'):
+        out_price_inr = predict_price(
+            airline, source, destination, stops, flight_class,
+            dep_hour, journey_month, journey_weekday,
+            int(journey_day), duration_hrs, int(passengers)
+        )
+
+    out_price_d = out_price_inr * fac
+
+    # ── Return prediction (Round-trip only) ────────────────────────────────
+    if is_roundtrip and return_date:
+        ret_duration_hrs = predict_duration(destination, source, stops)
+        with st.spinner('🤖  Running return ML model...'):
+            ret_price_inr = predict_price(
+                airline, destination, source, stops, flight_class,      # reversed route
+                ret_dep_hour,
+                return_date.month, return_date.weekday(), int(return_date.day),
+                ret_duration_hrs, int(passengers)
+            )
+        ret_price_d   = ret_price_inr * fac
+        total_price_d = out_price_d + ret_price_d
+    else:
+        ret_price_d   = 0.0
+        ret_price_inr = 0.0
+        total_price_d = out_price_d
+
+    # ── Shared display variables ───────────────────────────────────────────
+    low_d  = out_price_d * 0.90
+    high_d = out_price_d * 1.15
+    avg_d  = PRICE_AVG * fac
+    diff   = out_price_d - avg_d
+
+    src_code  = _city_code(source)
+    dst_code  = _city_code(destination)
+    stops_txt = _stops_display(stops)
+    dep_str   = f"{dep_hour:02d}:00"
+    month_name = MONTHS.get(int(journey_month), str(journey_month))
+    weekday_name = WEEKDAYS[int(journey_weekday)] if int(journey_weekday) in range(len(WEEKDAYS)) else str(journey_weekday)
+    day_str   = f"{weekday_name[:3]}, {int(journey_day)} {month_name}"
+    vs_class  = 'vs-avg-up' if diff > 0 else 'vs-avg-down'
+    vs_text   = (f'▲ {sym}{abs(diff):,.0f} above avg'
+                 if diff > 0 else f'▼ {sym}{abs(diff):,.0f} below avg')
+    dist_km      = haversine_km(source, destination)
+    dist_str     = f'{dist_km:,} km' if dist_km > 0 else 'N/A'
+    speed_str    = f'{round(dist_km / duration_hrs):,} km/h' if dist_km > 0 and duration_hrs > 0 else 'N/A'
+    price_per_km = f'{sym}{round(out_price_d / dist_km, 1)}/km' if dist_km > 0 else 'N/A'
+    holiday_name = INDIAN_HOLIDAYS.get((journey_month, int(journey_day)), None)
+    holiday_tag  = f'🎉 {holiday_name}' if holiday_name else ''
+
+    rc1, rc2 = st.columns([6, 1])
+    rc1.success('✅  Prediction ready!')
+    if rc2.button('🔄 New', key='_reset_btn', help='Reset and make a new prediction'):
+        st.session_state.submitted = False
+        st.rerun()
+
+    # ── OUTPUT A · Outbound Flight Ticket ─────────────────────────────────
+    st.markdown(
+        '<div class="output-section-title">📋 Output A · Outbound Flight</div>',
+        unsafe_allow_html=True
+    )
+    render_html(f"""
+    <div class="result-ticket">
+        <div class="ticket-header">
+            <div>
+                <div class="ticket-airline">{airline.upper()}</div>
+                <div style="color:#aac4ef;font-size:0.72rem;margin-top:2px">{day_str} {holiday_tag}</div>
+            </div>
+            <div>
+                <span class="ticket-tag">{stops_txt}</span>
+                <span class="ticket-tag">{flight_class}</span>
+                <span class="ticket-tag">{duration_hrs}h</span>
+                <span class="ticket-tag">{int(passengers)} pax</span>
+                <span class="ticket-tag">🤖 ML Model</span>
+                {"<span class='ticket-tag'>→ OUTBOUND</span>" if is_roundtrip else ""}
+            </div>
+        </div>
+        <div class="ticket-body">
+            <div class="ticket-city">
+                <div class="code">{src_code}</div>
+                <div class="name">{source}</div>
+                <div class="time">{dep_str}</div>
+            </div>
+            <div class="ticket-mid">
+                <div class="stops-label">{stops_txt.upper()}</div>
+                <div class="dash-line"><span class="plane">✈️</span></div>
+                <div class="dur">
+                    <span class="dur-hi">{duration_hrs}h</span>
+                    &nbsp;·&nbsp;
+                    <span class="dur-dist">{dist_str}</span>
+                </div>
+            </div>
+            <div class="ticket-city">
+                <div class="code">{dst_code}</div>
+                <div class="name">{destination}</div>
+            </div>
+        </div>
+        <div class="ticket-footer">
+            <div>
+                <div class="price-label">Outbound Fare · {int(passengers)} Pax</div>
+                <div class="price-amount">{sym}{out_price_d:,.0f}</div>
+                <span class="{vs_class}">{vs_text}</span>
+            </div>
+            <div class="route-info-block">
+                <div class="route-info-label">Route Info</div>
+                <div class="route-info-items">
+                    <div class="route-info-item">
+                        <span class="icon">📍</span>
+                        <span class="val">{dist_str}</span>
+                        <span class="sub">Distance</span>
+                    </div>
+                    <div class="route-info-item">
+                        <span class="icon">⚡</span>
+                        <span class="val">{speed_str}</span>
+                        <span class="sub">Avg Speed</span>
+                    </div>
+                    <div class="route-info-item">
+                        <span class="icon">💰</span>
+                        <span class="val" style="color:var(--primary)">{price_per_km}</span>
+                        <span class="sub">Cost/km</span>
+                    </div>
+                </div>
+            </div>
+            <div class="per-pax-block">
+                <div class="per-pax-label">Per Passenger</div>
+                <div class="per-pax-val">{sym}{out_price_d / passengers:,.0f}</div>
+                <div class="dataset-avg">Dataset avg: {sym}{avg_d:,.0f}</div>
+            </div>
+        </div>
+    </div>
+    """)
+
+    # ── OUTPUT B · Return Flight Ticket (Round-trip only) ──────────────────
+    if is_roundtrip and return_date:
+        ret_dist_km   = haversine_km(destination, source)   # same distance, reversed
+        ret_dist_str  = f'{ret_dist_km:,} km' if ret_dist_km > 0 else 'N/A'
+        ret_day_str   = f"{WEEKDAYS[return_date.weekday()][:3]}, {return_date.day} {MONTHS.get(return_date.month, str(return_date.month))}"
+        ret_diff      = ret_price_d - avg_d
+        ret_vs_class  = 'vs-avg-up' if ret_diff > 0 else 'vs-avg-down'
+        ret_vs_text   = (f'▲ {sym}{abs(ret_diff):,.0f} above avg'
+                         if ret_diff > 0 else f'▼ {sym}{abs(ret_diff):,.0f} below avg')
+        ret_perkm     = f'{sym}{round(ret_price_d / ret_dist_km, 1)}/km' if ret_dist_km > 0 else 'N/A'
+
+        st.markdown(
+            '<div class="output-section-title">🔄 Output B · Return Flight</div>',
+            unsafe_allow_html=True
+        )
+        render_html(f"""
+        <div class="result-ticket">
+            <div class="ticket-header return-header">
+                <div>
+                    <div class="ticket-airline">{airline.upper()}</div>
+                    <div style="color:#aac4ef;font-size:0.72rem;margin-top:2px">{ret_day_str}</div>
+                </div>
+                <div>
+                    <span class="ticket-tag">{stops_txt}</span>
+                    <span class="ticket-tag">{flight_class}</span>
+                    <span class="ticket-tag">{ret_duration_hrs}h</span>
+                    <span class="ticket-tag">{int(passengers)} pax</span>
+                    <span class="ticket-tag return-tag">← RETURN</span>
+                </div>
+            </div>
+            <div class="ticket-body">
+                <div class="ticket-city">
+                    <div class="code">{dst_code}</div>
+                    <div class="name">{destination}</div>
+                    <div class="time">{ret_dep_hour:02d}:00</div>
+                </div>
+                <div class="ticket-mid">
+                    <div class="stops-label">{stops_txt.upper()} RETURN</div>
+                    <div class="dash-line"><span class="plane">✈️</span></div>
+                    <div class="dur">
+                        <span class="dur-hi">{ret_duration_hrs:.1f}h</span>
+                        &nbsp;·&nbsp;
+                        <span class="dur-dist">{ret_dist_str}</span>
+                    </div>
+                </div>
+                <div class="ticket-city">
+                    <div class="code">{src_code}</div>
+                    <div class="name">{source}</div>
+                </div>
+            </div>
+            <div class="ticket-footer">
+                <div>
+                    <div class="price-label">Return Fare · {int(passengers)} Pax</div>
+                    <div class="price-amount">{sym}{ret_price_d:,.0f}</div>
+                    <span class="{ret_vs_class}">{ret_vs_text}</span>
+                </div>
+                <div class="route-info-block">
+                    <div class="route-info-label">Return Route Info</div>
+                    <div class="route-info-items">
+                        <div class="route-info-item">
+                            <span class="icon">📍</span>
+                            <span class="val">{ret_dist_str}</span>
+                            <span class="sub">Distance</span>
+                        </div>
+                        <div class="route-info-item">
+                            <span class="icon">📅</span>
+                            <span class="val">{(return_date - travel_date).days}d</span>
+                            <span class="sub">Gap</span>
+                        </div>
+                        <div class="route-info-item">
+                            <span class="icon">💰</span>
+                            <span class="val" style="color:var(--primary)">{ret_perkm}</span>
+                            <span class="sub">Cost/km</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="per-pax-block">
+                    <div class="per-pax-label">Per Passenger</div>
+                    <div class="per-pax-val">{sym}{ret_price_d / passengers:,.0f}</div>
+                    <div class="dataset-avg">Dataset avg: {sym}{avg_d:,.0f}</div>
+                </div>
+            </div>
+        </div>
+        """)
+
+        # ── TOTAL ROUND-TRIP FARE CARD ─────────────────────────────────────
+        st.markdown(
+            '<div class="output-section-title">💳 Output C · Round-trip Total</div>',
+            unsafe_allow_html=True
+        )
+        total_per_pax = total_price_d / passengers
+        trip_savings  = (out_price_d + ret_price_d) - total_price_d  # always 0 here; reserved for future discount logic
+        render_html(f"""
+        <div class="total-fare-card">
+            <div>
+                <div class="total-fare-label">Total Round-trip Fare</div>
+                <div class="total-fare-amount">{sym}{total_price_d:,.0f}</div>
+                <div class="total-fare-sub">
+                    {source} ⇄ {destination} · {int(passengers)} pax ·
+                    {travel_date.strftime("%d %b")} – {return_date.strftime("%d %b %Y")} ·
+                    {(return_date - travel_date).days} night(s)
+                </div>
+            </div>
+            <div style="text-align:right">
+                <div class="total-fare-badge">Per passenger: {sym}{total_per_pax:,.0f}</div>
+                <div style="color:rgba(255,255,255,0.55);font-size:0.72rem;margin-top:10px">
+                    Outbound {sym}{out_price_d:,.0f} + Return {sym}{ret_price_d:,.0f}
+                </div>
+            </div>
+        </div>
+        """)
+
+        # Metrics row for round-trip
+        if show_range:
+            b1, b2, b3, b4 = st.columns(4)
+            b1.metric('🛫 Outbound',   f'{sym}{out_price_d:,.0f}')
+            b2.metric('🛬 Return',     f'{sym}{ret_price_d:,.0f}')
+            b3.metric('💳 Total',      f'{sym}{total_price_d:,.0f}')
+            b4.metric('👤 Per Pax',    f'{sym}{total_per_pax:,.0f}')
+    else:
+        # One-way metrics
+        if show_range:
+            st.markdown(
+                '<div class="output-section-title">📉 Output B · Price Range</div>',
+                unsafe_allow_html=True
+            )
+            b1, b2, b3, b4 = st.columns(4)
+            b1.metric('🟢 Low Estimate',  f'{sym}{low_d:,.0f}',  delta=f'-{sym}{out_price_d - low_d:,.0f}')
+            b2.metric('🎯 Predicted',     f'{sym}{out_price_d:,.0f}')
+            b3.metric('🔴 High Estimate', f'{sym}{high_d:,.0f}', delta=f'+{sym}{high_d - out_price_d:,.0f}')
+            b4.metric('📊 Dataset Avg',   f'{sym}{avg_d:,.0f}')
+
+    # ── OUTPUT · Visualisations ────────────────────────────────────────────
+    out_label = 'D' if is_roundtrip else 'C'
+    st.markdown(
+        f'<div class="output-section-title">📊 Output {out_label} · Price Comparison Visualizations</div>',
+        unsafe_allow_html=True
+    )
+
+    PLOT_BG    = 'rgba(0,0,0,0)'
+    GRID_COLOR = 'rgba(148,163,184,0.15)'
+    FONT_FMLY  = 'Plus Jakarta Sans, sans-serif'
+    FONT_CLR   = '#94a3b8'
+    AXIS_LINE  = 'rgba(148,163,184,0.30)'
+    PRIMARY    = '#0052cc'
+    ACCENT     = '#f5a623'
+    SUCCESS    = '#22c55e'
+    DANGER     = '#ef4444'
+
+    def base_layout(title, xaxis_title='', yaxis_title=''):
+        return dict(
+            title=dict(text=title, font=dict(family=FONT_FMLY, size=14, color=FONT_CLR),
+                       x=0, xanchor='left', pad=dict(l=4, b=12)),
+            paper_bgcolor=PLOT_BG, plot_bgcolor=PLOT_BG,
+            font=dict(family=FONT_FMLY, color=FONT_CLR, size=11),
+            xaxis=dict(title=xaxis_title, gridcolor=GRID_COLOR, linecolor=AXIS_LINE,
+                       tickfont=dict(size=10, color=FONT_CLR)),
+            yaxis=dict(title=yaxis_title, gridcolor=GRID_COLOR, linecolor=AXIS_LINE,
+                       tickfont=dict(size=10, color=FONT_CLR), tickprefix=sym),
+            margin=dict(l=10, r=10, t=46, b=10),
+            hoverlabel=dict(bgcolor='#0f172a', font_size=12,
+                            font_family=FONT_FMLY, font_color='white',
+                            bordercolor='#1e293b'),
+            showlegend=False
+        )
+
+    _base = dict(source=source, destination=destination,
+                 **{"class": flight_class},
+                 dep_hour=dep_hour, journey_month=journey_month,
+                 journey_weekday=journey_weekday, journey_day=int(journey_day),
+                 duration_hours=duration_hrs)
+    _al_combos = [{**_base, 'airline': al} for al in AIRLINES]
+    _al_raw    = batch_predict_app(_al_combos, int(passengers))
+    al_prices  = {al: round(p * fac, 2) for al, p in zip(AIRLINES, _al_raw)}
+
+    al_df = (
+        pd.DataFrame({'Airline': list(al_prices.keys()), 'Price': list(al_prices.values())})
+        .sort_values('Price').reset_index(drop=True)
+    )
+    al_df['Selected'] = al_df['Airline'] == airline
+    al_df['Label']    = al_df['Price'].apply(lambda v: f'{sym}{v:,.0f}')
+
+    viz_c1, viz_c2 = st.columns(2)
+
+    with viz_c1:
+        st.caption('🏷️ All Airlines · Ranked by Price')
+        bar_colors = [PRIMARY if a == airline else
+                      ('rgba(0,82,204,0.25)' if al_prices[a] < out_price_d else 'rgba(239,68,68,0.25)')
+                      for a in al_df['Airline']]
+        fig1 = go.Figure(go.Bar(
+            x=al_df['Price'], y=al_df['Airline'], orientation='h',
+            marker=dict(color=bar_colors, line=dict(width=0)),
+            text=al_df['Label'], textposition='outside',
+            textfont=dict(size=10, family=FONT_FMLY, color=FONT_CLR),
+            hovertemplate='<b>%{y}</b><br>Price: ' + sym + '%{x:,.0f}<extra></extra>',
+            width=0.65
+        ))
+        fig1.add_vline(x=out_price_d, line_width=2, line_dash='dash', line_color=ACCENT,
+                       annotation_text='Your pick',
+                       annotation_font=dict(size=10, color=ACCENT, family=FONT_FMLY),
+                       annotation_position='top right')
+        layout1 = base_layout('', xaxis_title=f'Price ({sym})')
+        layout1['yaxis']['title'] = ''
+        layout1['margin'] = dict(l=10, r=120, t=10, b=10)
+        layout1['height'] = 340
+        layout1['xaxis']['range'] = [0, al_df['Price'].max() * 1.28]
+        fig1.update_layout(**layout1)
+        st.plotly_chart(fig1, use_container_width=True, config={'displayModeBar': False})
+
+    with viz_c2:
+        st.caption('🔄 Price by Number of Stops')
+        cheapest_al = al_df.iloc[0]['Airline']
+        stops_data  = {}
+        for st_opt in STOPS:
+            stops_data[st_opt] = {
+                'selected': predict_price(airline, source, destination, st_opt, flight_class,
+                                          dep_hour, journey_month, journey_weekday,
+                                          int(journey_day), duration_hrs, int(passengers)) * fac,
+                'cheapest': predict_price(cheapest_al, source, destination, st_opt, flight_class,
+                                          dep_hour, journey_month, journey_weekday,
+                                          int(journey_day), duration_hrs, int(passengers)) * fac,
+            }
+        fig2 = go.Figure()
+        fig2.add_trace(go.Bar(
+            name=airline, x=STOPS,
+            y=[stops_data[s]['selected'] for s in STOPS],
+            marker_color=PRIMARY,
+            text=[f'{sym}{stops_data[s]["selected"]:,.0f}' for s in STOPS],
+            textposition='outside', textfont=dict(size=9, family=FONT_FMLY),
+            hovertemplate='<b>' + airline + '</b><br>%{x}<br>' + sym + '%{y:,.0f}<extra></extra>',
+        ))
+        if cheapest_al != airline:
+            fig2.add_trace(go.Bar(
+                name=cheapest_al, x=STOPS,
+                y=[stops_data[s]['cheapest'] for s in STOPS],
+                marker_color='rgba(0,82,204,0.25)',
+                text=[f'{sym}{stops_data[s]["cheapest"]:,.0f}' for s in STOPS],
+                textposition='outside',
+                textfont=dict(size=9, family=FONT_FMLY, color=FONT_CLR),
+                hovertemplate='<b>' + cheapest_al + '</b><br>%{x}<br>' + sym + '%{y:,.0f}<extra></extra>',
+            ))
+        layout2 = base_layout('', xaxis_title='Stops', yaxis_title=f'Price ({sym})')
+        layout2['barmode']    = 'group'
+        layout2['height']     = 340
+        layout2['showlegend'] = True
+        layout2['legend']     = dict(orientation='h', yanchor='bottom', y=1.02,
+                                     xanchor='left', x=0, font=dict(size=10, family=FONT_FMLY))
+        layout2['margin']     = dict(l=10, r=10, t=40, b=10)
+        fig2.update_layout(**layout2)
+        st.plotly_chart(fig2, use_container_width=True, config={'displayModeBar': False})
+
+    viz_c3, viz_c4 = st.columns(2)
+
+    with viz_c3:
+        st.caption('⏰ Price vs Departure Hour (Top 3 Airlines)')
+        mid_idx = len(al_df) // 2
+        mid_al  = al_df.iloc[mid_idx]['Airline']
+        top3    = list(dict.fromkeys([cheapest_al, airline, mid_al]))[:3]
+        hours   = list(range(0, 24))
+        fig3    = go.Figure()
+        line_colors = [SUCCESS, PRIMARY, ACCENT]
+        _c3_combos = [{**_base, 'airline': al, 'dep_hour': h} for al in top3 for h in hours]
+        _c3_raw    = batch_predict_app(_c3_combos, int(passengers))
+        _c3_prices = {al: [round(_c3_raw[ai * 24 + hi] * fac, 2) for hi in range(24)]
+                      for ai, al in enumerate(top3)}
+        for idx, al in enumerate(top3):
+            is_selected = (al == airline)
+            fig3.add_trace(go.Scatter(
+                x=hours, y=_c3_prices[al], mode='lines',
+                name=al,
+                line=dict(color=line_colors[idx % len(line_colors)],
+                          width=3 if is_selected else 1.5,
+                          dash='solid' if is_selected else 'dot'),
+                hovertemplate='<b>' + al + '</b><br>%{x:02d}:00 → ' + sym + '%{y:,.0f}<extra></extra>'
+            ))
+        fig3.add_vline(x=dep_hour, line_width=1.5, line_dash='dash', line_color=FONT_CLR,
+                       annotation_text=f'Dep {dep_hour:02d}:00',
+                       annotation_font=dict(size=9, color=FONT_CLR, family=FONT_FMLY),
+                       annotation_position='top right')
+        layout3 = base_layout('', xaxis_title='Departure Hour (24h)', yaxis_title=f'Price ({sym})')
+        layout3['height']     = 300
+        layout3['showlegend'] = True
+        layout3['legend']     = dict(orientation='h', yanchor='bottom', y=1.02,
+                                     xanchor='left', x=0, font=dict(size=9, family=FONT_FMLY))
+        layout3['margin']     = dict(l=10, r=10, t=40, b=10)
+        fig3.update_layout(**layout3)
+        st.plotly_chart(fig3, use_container_width=True, config={'displayModeBar': False})
+
+    with viz_c4:
+        st.caption('📈 Price vs Duration (Scatter)')
+        _c4_combos = [{**_base, 'airline': al,
+                       'duration_hours': predict_duration(source, destination, al_df.iloc[0]['Airline'])}
+                      for al in AIRLINES]
+        _c4_raw    = batch_predict_app(_c4_combos, int(passengers))
+        _c4_durs   = [predict_duration(source, destination, stops)] * len(AIRLINES)
+        fig4 = go.Figure()
+        for i, al in enumerate(AIRLINES):
+            is_sel = (al == airline)
+            fig4.add_trace(go.Scatter(
+                x=[_c4_durs[i]], y=[round(_c4_raw[i] * fac, 2)],
+                mode='markers+text', name=al,
+                marker=dict(size=14 if is_sel else 9,
+                            color=PRIMARY if is_sel else FONT_CLR,
+                            symbol='star' if is_sel else 'circle',
+                            line=dict(width=2 if is_sel else 0, color='white')),
+                text=[al], textposition='top center',
+                textfont=dict(size=8 if not is_sel else 10,
+                              color=PRIMARY if is_sel else FONT_CLR, family=FONT_FMLY),
+                hovertemplate='<b>' + al + '</b><br>Duration: %{x:.1f}h<br>Price: ' +
+                              sym + '%{y:,.0f}<extra></extra>',
+>>>>>>> e3f99cd (Fix Streamlit date month handling)
                 showlegend=False
             )
+<<<<<<< HEAD
 
         _base = dict(
             source=source,
@@ -1444,6 +2315,83 @@ if submitted:
             journey_weekday=journey_weekday,
             journey_day=int(journey_day),
             duration_hours=duration_hrs,
+=======
+            sc['airline']  = st.selectbox('Airline', AIRLINES,
+                                           index=AIRLINES.index(sc['airline']),
+                                           key=f'_sc_{sci}_al')
+            _vst = VALID_AIRLINE_STOPS.get(sc['airline'], STOPS)
+            if sc['stops'] not in _vst: sc['stops'] = _vst[0]
+            sc['stops']    = st.selectbox('Stops', _vst,
+                                           index=_vst.index(sc['stops']),
+                                           key=f'_sc_{sci}_st')
+            sc['dep_hour'] = st.slider('Dep Hour', 0, 23, sc['dep_hour'], key=f'_sc_{sci}_hr')
+            month_options = list(MONTHS.keys())
+            if sc['month'] not in month_options:
+                sc['month'] = month_options[0]
+            sc['month']    = st.selectbox('Month', month_options,
+                                           format_func=lambda m: MONTHS.get(m, str(m)),
+                                           index=month_options.index(sc['month']),
+                                           key=f'_sc_{sci}_mo')
+            sc['weekday']  = st.selectbox('Weekday', list(range(7)),
+                                           format_func=lambda d: WEEKDAYS[d],
+                                           index=sc['weekday'], key=f'_sc_{sci}_wd')
+
+    if not MODEL_LOADED:
+        st.error('❌ Scenario comparison needs the real model artifact. Run Notebook 17 first.')
+
+    if st.button('⚡ Compare Now', key='_sc_run', type='primary', use_container_width=True, disabled=not MODEL_LOADED):
+        _sc_src  = st.session_state.get('source', SOURCES[0])
+        _sc_dsts = VALID_DESTINATIONS.get(_sc_src, DESTINATIONS)
+        _sc_dst  = st.session_state.get('destination', _sc_dsts[0])
+        _active  = st.session_state.scenarios[:int(n_sc)]
+        _sc_durs = [predict_duration(_sc_src, _sc_dst, sc['stops']) for sc in _active]
+        _sc_combos = [
+            dict(airline=sc['airline'], source=_sc_src, destination=_sc_dst,
+                 **{"class": flight_class},
+                 dep_hour=sc['dep_hour'], journey_month=sc['month'],
+                 journey_weekday=sc['weekday'], journey_day=15,
+                 duration_hours=dur)
+            for sc, dur in zip(_active, _sc_durs)
+        ]
+        _sc_prices = batch_predict_app(_sc_combos, 1)
+        _sc_min    = min(_sc_prices)
+
+        res_cols = st.columns(int(n_sc))
+        for sci, (sc, p_inr, dur) in enumerate(zip(_active, _sc_prices, _sc_durs)):
+            p_d  = round(p_inr * fac, 0)
+            best = (p_inr == _sc_min)
+            card_cls = 'best' if best else 'def'
+            with res_cols[sci]:
+                st.markdown(
+                    f'<div class="scenario-card {card_cls}">'
+                    f'<div class="scenario-card-label">{sc["label"]}{"  🏆" if best else ""}</div>'
+                    f'<div class="scenario-card-airline">{sc["airline"]}</div>'
+                    f'<div class="scenario-card-detail">'
+                    f'{sc["stops"]} · {flight_class} · {MONTHS.get(sc["month"], str(sc["month"]))} · '
+                    f'{WEEKDAYS[sc["weekday"]][:3]} · {sc["dep_hour"]:02d}:00 · {dur:.1f}h</div>'
+                    f'<div class="scenario-card-price">{sym}{p_d:,.0f}</div>'
+                    f'<div class="scenario-card-route">{_sc_src} → {_sc_dst} · 1 pax</div>'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
+
+        _fig_sc = go.Figure(go.Bar(
+            x=[sc['label'] for sc in _active],
+            y=[round(p * fac) for p in _sc_prices],
+            marker_color=['#22c55e' if p == _sc_min else '#0052cc' for p in _sc_prices],
+            text=[f'{sym}{round(p * fac):,}' for p in _sc_prices],
+            textposition='outside',
+            textfont=dict(size=12, family='Syne, sans-serif'),
+            width=0.5
+        ))
+        _fig_sc.update_layout(
+            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+            font=dict(family='Plus Jakarta Sans, sans-serif', color='#94a3b8'),
+            yaxis=dict(tickprefix=sym, gridcolor='rgba(148,163,184,0.15)',
+                       linecolor='rgba(148,163,184,0.3)', tickfont=dict(color='#94a3b8')),
+            xaxis=dict(tickfont=dict(size=13, family='Syne, sans-serif', color='#94a3b8')),
+            margin=dict(l=10, r=10, t=30, b=10), height=260, showlegend=False
+>>>>>>> e3f99cd (Fix Streamlit date month handling)
         )
         _al_combos = [{**_base, 'airline': al} for al in AIRLINES]
         _al_raw = cached_batch_predict_app(_al_combos, int(passengers))

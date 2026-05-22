@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 from __future__ import annotations
 
 import calendar
@@ -214,6 +215,237 @@ STOPS_TO_NEW = {
 AIRLINE_MEAN_PRICE = {airline: NEW_AIRLINE_MEAN.get(airline, PRICE_AVG) for airline in AIRLINES}
 AIRLINE_MEAN = AIRLINE_MEAN_PRICE.copy()
 STOPS_MEAN = {old: NEW_STOPS_MEAN[STOPS_TO_NEW[old]] for old in STOPS}
+=======
+from __future__ import annotations
+
+import calendar
+import math
+import os
+from datetime import date
+from functools import lru_cache
+from pathlib import Path
+from typing import Any, Mapping, Optional
+
+import numpy as np
+import pandas as pd
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+COLAB_ROOT = Path("/content/drive/MyDrive/AirFair-Vista")
+BASE_PATH = Path(os.environ.get("AIRFAIR_BASE_PATH", COLAB_ROOT if COLAB_ROOT.exists() else PROJECT_ROOT))
+
+MODEL_PATH = str(BASE_PATH / "models" / "new_dataset_flight_price_prediction_pipeline.pkl")
+RAW_DATA_PATH = BASE_PATH / "data" / "raw" / "Clean_Dataset.csv"
+PROCESSED_DATA_PATH = BASE_PATH / "data" / "processed" / "new_flight_price_feature_engineered.csv"
+
+NEW_MODEL_FEATURES = [
+    "airline",
+    "source_city",
+    "departure_time",
+    "stops",
+    "arrival_time",
+    "destination_city",
+    "class",
+    "duration",
+    "days_left",
+    "flight_freq",
+    "airline_freq",
+    "source_city_freq",
+    "destination_city_freq",
+    "route_freq",
+    "duration_x_days_left",
+    "duration_sq",
+    "days_left_sq",
+    "is_business",
+    "is_non_stop",
+]
+MODEL_FEATURES = NEW_MODEL_FEATURES
+
+NEW_CATEGORY_VALUES = {
+    "airline": ["AirAsia", "Air_India", "GO_FIRST", "Indigo", "SpiceJet", "Vistara"],
+    "source_city": ["Bangalore", "Chennai", "Delhi", "Hyderabad", "Kolkata", "Mumbai"],
+    "departure_time": ["Afternoon", "Early_Morning", "Evening", "Late_Night", "Morning", "Night"],
+    "stops": ["zero", "one", "two_or_more"],
+    "arrival_time": ["Afternoon", "Early_Morning", "Evening", "Late_Night", "Morning", "Night"],
+    "destination_city": ["Bangalore", "Chennai", "Delhi", "Hyderabad", "Kolkata", "Mumbai"],
+    "class": ["Business", "Economy"],
+}
+
+# UI constants aligned to the new dataset while preserving the app structure.
+AIRLINES = NEW_CATEGORY_VALUES["airline"][:]
+SOURCES = NEW_CATEGORY_VALUES["source_city"][:]
+DESTINATIONS = NEW_CATEGORY_VALUES["destination_city"][:]
+STOPS = NEW_CATEGORY_VALUES["stops"][:]
+CLASSES = NEW_CATEGORY_VALUES["class"][:]
+MONTHS = {
+    1: "January",
+    2: "February",
+    3: "March",
+    4: "April",
+    5: "May",
+    6: "June",
+    7: "July",
+    8: "August",
+    9: "September",
+    10: "October",
+    11: "November",
+    12: "December",
+}
+WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+VALID_ROUTES = {(src, dst) for src in SOURCES for dst in DESTINATIONS if src != dst}
+VALID_DESTINATIONS = {src: [dst for dst in DESTINATIONS if dst != src] for src in SOURCES}
+VALID_AIRLINE_STOPS = {
+    "AirAsia": ["zero", "one", "two_or_more"],
+    "Air_India": ["zero", "one", "two_or_more"],
+    "GO_FIRST": ["zero", "one", "two_or_more"],
+    "Indigo": ["zero", "one", "two_or_more"],
+    "SpiceJet": ["zero", "one"],
+    "Vistara": ["zero", "one", "two_or_more"],
+}
+MAX_PAX_BY_STOPS = {"zero": 9, "one": 9, "two_or_more": 6}
+
+INDIAN_HOLIDAYS = {
+    (3, 25): "Holi",
+    (3, 29): "Good Friday",
+    (4, 14): "Ambedkar Jayanti / Tamil New Year",
+    (4, 17): "Ram Navami",
+    (4, 19): "Mahavir Jayanti",
+    (5, 1): "Labour Day",
+    (5, 23): "Buddha Purnima",
+    (6, 5): "Eid ul-Fitr",
+}
+
+CITY_COORDS = {
+    "Bangalore": (12.9716, 77.5946),
+    "Chennai": (13.0827, 80.2707),
+    "Delhi": (28.7041, 77.1025),
+    "Hyderabad": (17.3850, 78.4867),
+    "Kolkata": (22.5726, 88.3639),
+    "Mumbai": (19.0760, 72.8777),
+    # Legacy aliases are retained for compatibility with old saved session state.
+    "Banglore": (12.9716, 77.5946),
+    "New Delhi": (28.6139, 77.2090),
+    "Cochin": (9.9312, 76.2673),
+}
+
+PRICE_MIN = 1105
+PRICE_MAX = 123071
+PRICE_AVG = 20890
+PRICE_MED = 7425
+
+NEW_AIRLINE_MEAN = {
+    "AirAsia": 4091,
+    "Air_India": 23507,
+    "GO_FIRST": 5652,
+    "Indigo": 5324,
+    "SpiceJet": 6179,
+    "Vistara": 30397,
+}
+NEW_STOPS_MEAN = {"zero": 9376, "one": 22901, "two_or_more": 14113}
+NEW_CLASS_MEAN = {"Economy": 6572, "Business": 52540}
+NEW_DEPARTURE_MEAN = {
+    "Afternoon": 18179,
+    "Early_Morning": 20371,
+    "Evening": 21232,
+    "Late_Night": 9295,
+    "Morning": 21631,
+    "Night": 23062,
+}
+NEW_SOURCE_MEAN = {
+    "Bangalore": 21469,
+    "Chennai": 21995,
+    "Delhi": 18951,
+    "Hyderabad": 20156,
+    "Kolkata": 21746,
+    "Mumbai": 21484,
+}
+NEW_DEST_MEAN = {
+    "Bangalore": 21594,
+    "Chennai": 21953,
+    "Delhi": 18437,
+    "Hyderabad": 20428,
+    "Kolkata": 21960,
+    "Mumbai": 21373,
+}
+NEW_ROUTE_MEAN = {
+    ("Bangalore", "Chennai"): 23322,
+    ("Bangalore", "Delhi"): 17723,
+    ("Bangalore", "Hyderabad"): 21226,
+    ("Bangalore", "Kolkata"): 23500,
+    ("Bangalore", "Mumbai"): 23129,
+    ("Chennai", "Bangalore"): 25082,
+    ("Chennai", "Delhi"): 18982,
+    ("Chennai", "Hyderabad"): 21591,
+    ("Chennai", "Kolkata"): 22670,
+    ("Chennai", "Mumbai"): 22766,
+    ("Delhi", "Bangalore"): 17880,
+    ("Delhi", "Chennai"): 19370,
+    ("Delhi", "Hyderabad"): 17347,
+    ("Delhi", "Kolkata"): 20566,
+    ("Delhi", "Mumbai"): 19356,
+    ("Hyderabad", "Bangalore"): 21347,
+    ("Hyderabad", "Chennai"): 21848,
+    ("Hyderabad", "Delhi"): 17244,
+    ("Hyderabad", "Kolkata"): 20824,
+    ("Hyderabad", "Mumbai"): 20081,
+    ("Kolkata", "Bangalore"): 22745,
+    ("Kolkata", "Chennai"): 23660,
+    ("Kolkata", "Delhi"): 19422,
+    ("Kolkata", "Hyderabad"): 21500,
+    ("Kolkata", "Mumbai"): 22079,
+    ("Mumbai", "Bangalore"): 23148,
+    ("Mumbai", "Chennai"): 22782,
+    ("Mumbai", "Delhi"): 18725,
+    ("Mumbai", "Hyderabad"): 21004,
+    ("Mumbai", "Kolkata"): 22379,
+}
+
+AIRLINE_TO_NEW = {
+    "AirAsia": "AirAsia",
+    "Air_India": "Air_India",
+    "GO_FIRST": "GO_FIRST",
+    "Indigo": "Indigo",
+    "SpiceJet": "SpiceJet",
+    "Vistara": "Vistara",
+    # Legacy aliases kept so older session state still maps safely.
+    "Air Asia": "AirAsia",
+    "Air India": "Air_India",
+    "GoAir": "GO_FIRST",
+    "IndiGo": "Indigo",
+    "Jet Airways": "Vistara",
+    "Jet Airways Business": "Vistara",
+    "Multiple Carriers": "Air_India",
+    "Multiple Carriers Premium Economy": "Air_India",
+    "TruJet": "Indigo",
+    "Vistara Premium Economy": "Vistara",
+}
+CITY_TO_NEW = {
+    "Banglore": "Bangalore",
+    "Bangalore": "Bangalore",
+    "Chennai": "Chennai",
+    "Cochin": "Chennai",
+    "Delhi": "Delhi",
+    "New Delhi": "Delhi",
+    "Hyderabad": "Hyderabad",
+    "Kolkata": "Kolkata",
+    "Mumbai": "Mumbai",
+}
+STOPS_TO_NEW = {
+    "zero": "zero",
+    "one": "one",
+    "two_or_more": "two_or_more",
+    "non-stop": "zero",
+    "1 stop": "one",
+    "2 stops": "two_or_more",
+    "3 stops": "two_or_more",
+    "4 stops": "two_or_more",
+}
+
+AIRLINE_MEAN_PRICE = {airline: NEW_AIRLINE_MEAN.get(airline, PRICE_AVG) for airline in AIRLINES}
+AIRLINE_MEAN = AIRLINE_MEAN_PRICE.copy()
+STOPS_MEAN = {old: NEW_STOPS_MEAN[STOPS_TO_NEW[old]] for old in STOPS}
+>>>>>>> e3f99cd (Fix Streamlit date month handling)
 _default_source_freq = 1 / max(len(SOURCES), 1)
 _default_dest_freq = 1 / max(len(DESTINATIONS), 1)
 _source_freq_fallback = {city: _default_source_freq for city in SOURCES}
